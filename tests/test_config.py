@@ -2,6 +2,7 @@ from pathlib import Path
 
 from algohlper.config import Settings
 from algohlper.services.task_queue import InProcessTaskQueue, create_task_queue
+from algohlper.worker import celery_app as celery_app_module
 
 
 def test_settings_accepts_codex_api_key(monkeypatch, tmp_path) -> None:
@@ -40,7 +41,11 @@ env_key = "CODEX_API_KEY"
     assert settings.openai_reasoning_effort == "xhigh"
 
 
-def test_celery_backend_falls_back_to_inprocess_when_package_missing(tmp_path) -> None:
+def test_celery_backend_falls_back_to_inprocess_when_package_missing(monkeypatch, tmp_path) -> None:
+    def raise_import_error(_settings):
+        raise ImportError("celery unavailable")
+
+    monkeypatch.setattr(celery_app_module, "create_celery_app", raise_import_error)
     settings = Settings(data_dir=tmp_path, task_queue_backend="celery")
     queue = create_task_queue(settings)
     assert isinstance(queue, InProcessTaskQueue)

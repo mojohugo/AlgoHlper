@@ -14,6 +14,7 @@
 - 异步任务骨架：新增 `parse-async / generate-artifacts-async / duel-async` 三个接口，先用进程内队列跑任务。
 - 队列后端抽象：现在支持 `inprocess / celery` 两种后端入口；未安装 Celery 或未配置时会回退到 `inprocess`。
 - 最小前端工作台：新增 `apps/web`，可直接操作项目、题面、异步生成、用户代码上传与异步对拍。
+- 前端结果视图：新增产物标签页、失败样例卡片、expected/actual 输出 diff，便于直接看首个反例。
 - C++ 对拍引擎：调用本机 `g++` 编译 `brute.cpp` / `gen.cpp` / `main.cpp`，执行多轮随机对拍并返回首个失败样例。
 - FastAPI 接口：项目、题面上传、解析、资产写入、starter 资产生成、对拍、任务查询。
 - CLI：支持 `parse`、`starter`、`generate`、`duel` 四个命令。

@@ -2,14 +2,46 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+type ArtifactRecord = {
+  type: string;
+  language: string;
+  code: string;
+};
+
+type DuelFailure = {
+  round: number;
+  seed: number;
+  mode: string;
+  size: number;
+  reason: string;
+  input: string;
+  expected_output: string;
+  actual_output: string;
+  stderr: string;
+  timed_out: boolean;
+  user_exit_code?: number | null;
+  brute_exit_code?: number | null;
+};
+
+type DuelResult = {
+  status: string;
+  rounds_requested: number;
+  rounds_completed: number;
+  compile_logs: Record<string, string>;
+  failure?: DuelFailure | null;
+  summary: string;
+  warnings: string[];
+  created_at: string;
+};
+
 type ProjectRecord = {
   id: string;
   name: string;
   status: string;
   raw_problem_content?: string | null;
   problem_spec?: unknown;
-  artifacts: Record<string, { type: string; language: string; code: string }>;
-  last_duel_result?: unknown;
+  artifacts: Record<string, ArtifactRecord>;
+  last_duel_result?: DuelResult | null;
   task_ids: string[];
   updated_at: string;
 };
@@ -49,6 +81,7 @@ export function Workbench() {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [task, setTask] = useState<TaskRecord | null>(null);
+  const [activeArtifact, setActiveArtifact] = useState("brute");
   const [projectName, setProjectName] = useState("Demo Project");
   const [problemText, setProblemText] = useState(`# A + B Problem
 
@@ -110,6 +143,10 @@ int main() {
     }
     setProblemText(selected.raw_problem_content ?? "");
     setUserCode(selected.artifacts.user_solution?.code ?? userCode);
+    const nextActiveArtifact = pickDefaultArtifact(selected.artifacts, activeArtifact);
+    if (nextActiveArtifact !== activeArtifact) {
+      setActiveArtifact(nextActiveArtifact);
+    }
   }, [selectedProjectId, projects]);
 
   useEffect(() => {
@@ -386,17 +423,16 @@ int main() {
           <section className="twoCol">
             <section className="panel stack">
               <h2>生成产物预览</h2>
-              <ArtifactPreview project={selectedProject} artifactName="brute" />
-              <ArtifactPreview project={selectedProject} artifactName="generator" />
+              <ArtifactTabs
+                project={selectedProject}
+                activeArtifact={activeArtifact}
+                onChange={setActiveArtifact}
+              />
             </section>
 
             <section className="panel stack">
               <h2>对拍结果</h2>
-              <div className="pre">
-                {selectedProject?.last_duel_result
-                  ? JSON.stringify(selectedProject.last_duel_result, null, 2)
-                  : "还没有对拍结果"}
-              </div>
+              <DuelResultPanel result={selectedProject?.last_duel_result ?? null} />
             </section>
           </section>
         </section>
@@ -405,18 +441,142 @@ int main() {
   );
 }
 
-function ArtifactPreview({
+function ArtifactTabs({
   project,
-  artifactName,
+  activeArtifact,
+  onChange,
 }: {
   project: ProjectRecord | null;
-  artifactName: string;
+  activeArtifact: string;
+  onChange: (artifactName: string) => void;
 }) {
-  const artifact = project?.artifacts?.[artifactName];
+  const artifactEntries = getArtifactEntries(project?.artifacts ?? {});
+  const artifact = project?.artifacts?.[activeArtifact];
+
   return (
     <div className="stack">
-      <div className="pill">{artifactName}</div>
-      <div className="code">{artifact?.code ?? `${artifactName} 暂无内容`}</div>
+      <div className="tabs">
+        {artifactEntries.map(([artifactName, value]) => (
+          <button
+            key={artifactName}
+            type="button"
+            className={`tabButton ${artifactName === activeArtifact ? "active" : ""}`}
+            onClick={() => onChange(artifactName)}
+          >
+            {artifactName}
+            <span className="muted">({value.language})</span>
+          </button>
+        ))}
+      </div>
+      <div className="code">{artifact?.code ?? "当前没有可预览的产物。"}</div>
+    </div>
+  );
+}
+
+function DuelResultPanel({ result }: { result: DuelResult | null }) {
+  if (!result) {
+    return <div className="muted">还没有对拍结果</div>;
+  }
+
+  const failure = result.failure;
+
+  return (
+    <div className="stack">
+      <div className="status">
+        {result.status} / {result.rounds_completed} / {result.rounds_requested}
+      </div>
+      <div>{result.summary}</div>
+      {result.warnings.length > 0 ? (
+        <div className="stack">
+          {result.warnings.map((warning) => (
+            <div key={warning} className="muted">
+              - {warning}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {failure ? (
+        <>
+          <div className="card stack">
+            <div className="pill">失败样例</div>
+            <div>reason: {humanizeReason(failure.reason)}</div>
+            <div>
+              round={failure.round} seed={failure.seed} mode={failure.mode} size={failure.size}
+            </div>
+            {failure.stderr ? <div className="pre">{failure.stderr}</div> : null}
+          </div>
+          <div className="stack">
+            <h3>输入</h3>
+            <div className="pre">{failure.input || "(empty)"}</div>
+          </div>
+          <DiffViewer expected={failure.expected_output} actual={failure.actual_output} />
+          {Object.keys(result.compile_logs).length > 0 ? (
+            <div className="stack">
+              <h3>编译日志</h3>
+              {Object.entries(result.compile_logs).map(([name, log]) => (
+                <div key={name} className="stack">
+                  <div className="pill">{name}</div>
+                  <div className="pre">{log || "(empty)"}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="success">本轮没有发现失败样例。</div>
+      )}
+    </div>
+  );
+}
+
+function DiffViewer({
+  expected,
+  actual,
+}: {
+  expected: string;
+  actual: string;
+}) {
+  const expectedLines = normalizeLines(expected);
+  const actualLines = normalizeLines(actual);
+  const maxLength = Math.max(expectedLines.length, actualLines.length);
+
+  return (
+    <div className="stack">
+      <h3>输出对比</h3>
+      <div className="diffGrid">
+        <div className="diffCol">
+          <div className="pill">expected</div>
+          <div className="pre diffPre">
+            {Array.from({ length: maxLength }, (_, index) => {
+              const left = expectedLines[index] ?? "";
+              const right = actualLines[index] ?? "";
+              const same = left === right;
+              return (
+                <div key={`left-${index}`} className={`diffLine ${same ? "same" : "removed"}`}>
+                  <span className="lineNo">{index + 1}</span>
+                  <span>{left || " "}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="diffCol">
+          <div className="pill">actual</div>
+          <div className="pre diffPre">
+            {Array.from({ length: maxLength }, (_, index) => {
+              const left = expectedLines[index] ?? "";
+              const right = actualLines[index] ?? "";
+              const same = left === right;
+              return (
+                <div key={`right-${index}`} className={`diffLine ${same ? "same" : "added"}`}>
+                  <span className="lineNo">{index + 1}</span>
+                  <span>{right || " "}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -426,4 +586,40 @@ function asErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function getArtifactEntries(artifacts: Record<string, ArtifactRecord>): Array<[string, ArtifactRecord]> {
+  const preferredOrder = ["brute", "generator", "user_solution", "compare", "readme"];
+  return Object.entries(artifacts).sort(
+    ([left], [right]) => preferredOrder.indexOf(left) - preferredOrder.indexOf(right),
+  );
+}
+
+function pickDefaultArtifact(artifacts: Record<string, ArtifactRecord>, current: string): string {
+  if (artifacts[current]) {
+    return current;
+  }
+  const next = getArtifactEntries(artifacts)[0]?.[0];
+  return next ?? "brute";
+}
+
+function normalizeLines(text: string): string[] {
+  return text.replace(/\r\n/g, "\n").split("\n");
+}
+
+function humanizeReason(reason: string): string {
+  switch (reason) {
+    case "wrong_answer":
+      return "Wrong Answer";
+    case "user_runtime_error":
+      return "User Runtime Error";
+    case "user_timed_out":
+      return "User Timed Out";
+    case "generator_runtime_error":
+      return "Generator Runtime Error";
+    case "brute_runtime_error":
+      return "Brute Runtime Error";
+    default:
+      return reason;
+  }
 }
