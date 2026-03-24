@@ -71,6 +71,7 @@ class GenerationRequest(BaseModel):
     instructions: str | None = None
     force_overwrite: bool = True
     self_test: bool = True
+    repair_rounds: int = Field(default=1, ge=0, le=2)
 
 
 class GenerationValidationResult(BaseModel):

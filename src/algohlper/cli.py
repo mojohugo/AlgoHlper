@@ -34,6 +34,7 @@ def main() -> int:
     generate_parser.add_argument("--project-name", default="CLI Generated Project")
     generate_parser.add_argument("--provider", default="auto", choices=["auto", "template", "openai"])
     generate_parser.add_argument("--instructions")
+    generate_parser.add_argument("--repair-rounds", type=int, default=1)
 
     duel_parser = subparsers.add_parser("duel", help="Compile and run local duel")
     duel_parser.add_argument("--brute", required=True)
@@ -85,6 +86,7 @@ def _run_generate(args: argparse.Namespace) -> int:
         project_name=args.project_name,
         provider=args.provider,
         instructions=args.instructions,
+        repair_rounds=args.repair_rounds,
     )
 
 
@@ -95,6 +97,7 @@ def _write_generated_artifacts(
     project_name: str,
     provider: str,
     instructions: str | None,
+    repair_rounds: int = 1,
 ) -> int:
     raw_problem = read_text_file(input_path)
     spec = parse_problem_spec(raw_problem)
@@ -104,7 +107,7 @@ def _write_generated_artifacts(
     result = generator.generate(
         project,
         spec,
-        GenerationRequest(provider=provider, instructions=instructions),
+        GenerationRequest(provider=provider, instructions=instructions, repair_rounds=repair_rounds),
     )
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)

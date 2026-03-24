@@ -17,6 +17,7 @@ class Settings:
     openai_model: str = "gpt-5.4"
     openai_base_url: str | None = None
     openai_timeout_s: float = 120.0
+    openai_reasoning_effort: str = "medium"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -34,6 +35,7 @@ class Settings:
         openai_model = os.getenv("ALGOHLPER_OPENAI_MODEL", "gpt-5.4")
         openai_base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("ALGOHLPER_OPENAI_BASE_URL")
         openai_timeout_s = float(os.getenv("ALGOHLPER_OPENAI_TIMEOUT_S", "120"))
+        openai_reasoning_effort = os.getenv("ALGOHLPER_OPENAI_REASONING_EFFORT", "medium")
         return cls(
             data_dir=data_dir,
             cxx=cxx,
@@ -45,4 +47,5 @@ class Settings:
             openai_model=openai_model,
             openai_base_url=openai_base_url,
             openai_timeout_s=openai_timeout_s,
+            openai_reasoning_effort=openai_reasoning_effort,
         )

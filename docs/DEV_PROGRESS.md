@@ -42,6 +42,14 @@
   - `openai provider` 默认执行自检，不通过就报错/回退
   - `template provider` 因为本身是占位模板，默认跳过自检并显式返回 skipped
 
+### 4.3 OpenAI 自动回修
+- `openai provider` 现在支持在首次生成失败后，携带以下上下文再请求一次模型：
+  - 编译日志
+  - generator smoke test 结果
+  - brute 样例校验结果
+  - 上一轮生成代码
+- 当前默认回修 1 轮，且上限限制在 2 轮以内。
+
 ### 5. 本地对拍内核
 - 实现了 C++ 编译与执行封装，基于本机 `g++`。
 - 实现了标准对拍循环：`gen -> brute -> user -> compare`。
@@ -78,10 +86,11 @@
 - 写了 API 烟雾测试。
 - 写了对拍测试，能稳定发现错误程序的反例。
 - 写了资产自检测试，覆盖编译成功/失败路径。
+- 写了 OpenAI 自动回修测试，覆盖“首次生成失败、第二次修复成功”的路径。
 
 ## 当前明确未完成
 
-- `openai provider` 已有基础自检，但还没有做多轮 repair、结构化严格 schema 约束、编译失败自动回修。
+- `openai provider` 已有基础自检和单轮自动回修，但还没有做更严格的 schema 约束、样例不足时的补测策略、以及多轮稳定性治理。
 - 没有 PostgreSQL / Redis / Celery。
 - 没有 Docker / gVisor Runner。
 - 没有前端页面。

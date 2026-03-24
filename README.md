@@ -9,6 +9,7 @@
 - Starter 资产生成：自动生成 `brute.cpp`、`gen.cpp`、`compare.py`、`README.md` 模板，便于后续接 LLM 真正生成代码。
 - 可插拔代码生成器：新增 `template / openai / auto` 三种 provider 入口。未配置 OpenAI 时，`auto` 会自动回退到模板生成器。
 - 生成后自检：对 `openai provider` 生成的 `brute.cpp` / `gen.cpp` 会先做编译检查、generator smoke test、样例回放，再决定是否落库。
+- 自动回修：如果 `openai provider` 首次生成未通过自检，会带着编译日志和样例失败信息自动回修 1 轮（可调）。
 - C++ 对拍引擎：调用本机 `g++` 编译 `brute.cpp` / `gen.cpp` / `main.cpp`，执行多轮随机对拍并返回首个失败样例。
 - FastAPI 接口：项目、题面上传、解析、资产写入、starter 资产生成、对拍、任务查询。
 - CLI：支持 `parse`、`starter`、`generate`、`duel` 四个命令。
@@ -53,6 +54,12 @@ algohlper starter .\problem.md .\out --format markdown
 
 ```powershell
 algohlper generate .\problem.md .\out --provider auto
+```
+
+如果你要显式控制回修轮数：
+
+```powershell
+algohlper generate .\problem.md .\out --provider openai --repair-rounds 1
 ```
 
 生成目录里还会附带：

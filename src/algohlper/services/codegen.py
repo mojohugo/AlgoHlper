@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from typing import Any
 
 from algohlper.config import Settings
 from algohlper.models import ArtifactRecord, GenerationRequest, GenerationValidationResult, ProblemSpec, ProjectRecord
@@ -58,30 +59,90 @@ class OpenAICodeGenerator:
     ) -> CodeGenerationResult:
         if not self.settings.openai_api_key:
             raise CodeGenerationError("OPENAI_API_KEY 未配置，无法使用 openai provider")
+        client = self._create_client()
+        instructions = _build_system_instructions()
+        prompt = _build_user_prompt(project=project, spec=spec, extra_instructions=request.instructions)
+        payload = self._request_payload(client=client, instructions=instructions, prompt=prompt)
+
+        attempts = request.repair_rounds + 1
+        last_validation = GenerationValidationResult(skipped=not request.self_test)
+        warnings: list[str] = []
+        for attempt_index in range(attempts):
+            artifacts = self._payload_to_artifacts(project=project, spec=spec, request=request, payload=payload)
+            warnings = self._payload_warnings(payload)
+            warnings.append("OpenAI 生成结果仍建议先编译并用样例自测，再开始大规模对拍。")
+            if not request.self_test:
+                return CodeGenerationResult(
+                    provider=self.provider_name,
+                    artifacts=artifacts,
+                    warnings=warnings,
+                    validation=GenerationValidationResult(skipped=True),
+                )
+
+            last_validation = self.validator.validate_cpp_assets(spec=spec, artifacts=artifacts)
+            warnings.extend(last_validation.warnings)
+            if not last_validation.errors:
+                return CodeGenerationResult(
+                    provider=self.provider_name,
+                    artifacts=artifacts,
+                    warnings=warnings,
+                    validation=last_validation,
+                )
+
+            if attempt_index >= request.repair_rounds:
+                break
+
+            repair_prompt = _build_repair_prompt(
+                project=project,
+                spec=spec,
+                previous_payload=payload,
+                validation=last_validation,
+                extra_instructions=request.instructions,
+            )
+            payload = self._request_payload(
+                client=client,
+                instructions=_build_repair_system_instructions(),
+                prompt=repair_prompt,
+            )
+
+        error_message = "; ".join(last_validation.errors) if last_validation.errors else "未知自检失败"
+        raise CodeGenerationError(f"生成资产未通过自检：{error_message}")
+
+    def _create_client(self) -> Any:
         try:
             from openai import OpenAI
         except ImportError as exc:
             raise CodeGenerationError(
                 "未安装 openai SDK。请执行: python -m pip install -e .[openai]"
             ) from exc
-
-        client = OpenAI(
+        return OpenAI(
             api_key=self.settings.openai_api_key,
             base_url=self.settings.openai_base_url,
             timeout=self.settings.openai_timeout_s,
         )
-        instructions = _build_system_instructions()
-        prompt = _build_user_prompt(project=project, spec=spec, extra_instructions=request.instructions)
-        response = client.responses.create(
-            model=self.settings.openai_model,
-            instructions=instructions,
-            input=prompt,
-        )
+
+    def _request_payload(self, *, client: Any, instructions: str, prompt: str) -> dict:
+        request_kwargs: dict[str, Any] = {
+            "model": self.settings.openai_model,
+            "instructions": instructions,
+            "input": prompt,
+        }
+        if self.settings.openai_reasoning_effort:
+            request_kwargs["reasoning"] = {"effort": self.settings.openai_reasoning_effort}
+        response = client.responses.create(**request_kwargs)
         raw_text = getattr(response, "output_text", "") or ""
         if not raw_text.strip():
             raise CodeGenerationError("OpenAI 返回空内容，未生成任何资产")
-        payload = _extract_json_payload(raw_text)
+        return _extract_json_payload(raw_text)
 
+    def _payload_to_artifacts(
+        self,
+        *,
+        project: ProjectRecord,
+        spec: ProblemSpec,
+        request: GenerationRequest,
+        payload: dict,
+    ) -> dict[str, ArtifactRecord]:
         artifacts: dict[str, ArtifactRecord] = {}
         template_artifacts = build_starter_artifacts(project, spec)
         for asset_name in request.assets:
@@ -97,23 +158,12 @@ class OpenAICodeGenerator:
                 artifacts["generator"] = ArtifactRecord(type="generator", language="cpp", code=code)
             elif asset_name in {"compare", "readme"}:
                 artifacts[asset_name] = template_artifacts[asset_name]
+        return artifacts
 
+    @staticmethod
+    def _payload_warnings(payload: dict) -> list[str]:
         notes = payload.get("notes")
-        warnings = [notes.strip()] if isinstance(notes, str) and notes.strip() else []
-        warnings.append("OpenAI 生成结果仍建议先编译并用样例自测，再开始大规模对拍。")
-        validation = GenerationValidationResult(skipped=True)
-        if request.self_test:
-            validation = self.validator.validate_cpp_assets(spec=spec, artifacts=artifacts)
-            warnings.extend(validation.warnings)
-            if validation.errors:
-                error_message = "; ".join(validation.errors)
-                raise CodeGenerationError(f"生成资产未通过自检：{error_message}")
-        return CodeGenerationResult(
-            provider=self.provider_name,
-            artifacts=artifacts,
-            warnings=warnings,
-            validation=validation,
-        )
+        return [notes.strip()] if isinstance(notes, str) and notes.strip() else []
 
 
 class CompositeCodeGenerator:
@@ -160,6 +210,17 @@ def _build_system_instructions() -> str:
     )
 
 
+def _build_repair_system_instructions() -> str:
+    return (
+        "You repair previously generated duel assets for competitive-programming debugging. "
+        "Return a single JSON object and nothing else. "
+        "JSON keys: brute_cpp, generator_cpp, notes. "
+        "Use the validation errors and compiler logs to fix the code. "
+        "Keep both programs as complete C++17 programs. "
+        "Do not wrap JSON in markdown fences."
+    )
+
+
 def _build_user_prompt(
     *,
     project: ProjectRecord,
@@ -170,6 +231,25 @@ def _build_user_prompt(
         "project_name": project.name,
         "problem_spec": spec.model_dump(mode="json"),
         "raw_problem_content": project.raw_problem_content or "",
+        "extra_instructions": extra_instructions or "",
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _build_repair_prompt(
+    *,
+    project: ProjectRecord,
+    spec: ProblemSpec,
+    previous_payload: dict,
+    validation: GenerationValidationResult,
+    extra_instructions: str | None,
+) -> str:
+    payload = {
+        "project_name": project.name,
+        "problem_spec": spec.model_dump(mode="json"),
+        "raw_problem_content": project.raw_problem_content or "",
+        "previous_generation": previous_payload,
+        "validation": validation.model_dump(mode="json"),
         "extra_instructions": extra_instructions or "",
     }
     return json.dumps(payload, ensure_ascii=False, indent=2)
