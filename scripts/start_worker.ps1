@@ -23,10 +23,10 @@ Push-Location $repoRoot
 try {
     & $pythonCmd -c "import celery" 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Celery 未安装，正在安装 queue 依赖..."
+        Write-Host "Celery not found. Installing queue dependencies..."
         & $pythonCmd -m pip install -e .[queue]
         if ($LASTEXITCODE -ne 0) {
-            throw "安装 Celery 依赖失败。"
+            throw "Failed to install Celery queue dependencies."
         }
     }
 
