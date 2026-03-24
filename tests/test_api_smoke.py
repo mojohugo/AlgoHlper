@@ -132,3 +132,36 @@ n
             break
         time.sleep(0.1)
     assert task["status"] == "completed"
+
+
+def test_api_runtime_endpoint_reports_environment(tmp_path) -> None:
+    app = create_app(
+        Settings(
+            data_dir=tmp_path,
+            cxx="g++",
+            task_queue_backend="inprocess",
+            redis_host="127.0.0.1",
+            redis_port=6379,
+            redis_password="123456",
+            openai_api_key="test-key",
+            openai_model="gpt-5.4",
+            openai_base_url="https://example.com/v1",
+            openai_reasoning_effort="medium",
+        )
+    )
+    client = TestClient(app)
+
+    response = client.get("/api/runtime")
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["openai"]["configured"] is True
+    assert isinstance(payload["openai"]["sdk_installed"], bool)
+    assert payload["openai"]["model"] == "gpt-5.4"
+    assert payload["openai"]["base_url"] == "https://example.com/v1"
+    assert payload["queue"]["requested_backend"] == "inprocess"
+    assert payload["queue"]["active_backend"] == "inprocess"
+    assert payload["redis"]["host"] == "127.0.0.1"
+    assert payload["redis"]["port"] == 6379
+    assert payload["redis"]["password_configured"] is True
+    assert payload["toolchain"]["cxx"] == "g++"

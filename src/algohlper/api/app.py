@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,6 +15,11 @@ from algohlper.models import (
     ProblemSpec,
     ProblemTextInput,
     ProjectRecord,
+    RuntimeInfo,
+    RuntimeOpenAIInfo,
+    RuntimeQueueInfo,
+    RuntimeRedisInfo,
+    RuntimeToolchainInfo,
 )
 from algohlper.services.job_runner import (
     JobContext,
@@ -69,6 +76,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
         return {"status": "ok", "time": utc_now().isoformat()}
+
+    @app.get("/api/runtime", response_model=RuntimeInfo)
+    def get_runtime() -> RuntimeInfo:
+        openai_sdk_installed = _module_available("openai")
+        active_backend = getattr(queue, "backend_name", resolved_settings.task_queue_backend)
+        return RuntimeInfo(
+            api_time=utc_now(),
+            openai=RuntimeOpenAIInfo(
+                configured=bool(resolved_settings.openai_api_key),
+                sdk_installed=openai_sdk_installed,
+                provider_available=bool(resolved_settings.openai_api_key) and openai_sdk_installed,
+                model=resolved_settings.openai_model,
+                base_url=resolved_settings.openai_base_url,
+                reasoning_effort=resolved_settings.openai_reasoning_effort,
+            ),
+            queue=RuntimeQueueInfo(
+                requested_backend=resolved_settings.task_queue_backend,
+                active_backend=active_backend,
+                worker_pool=resolved_settings.celery_worker_pool,
+            ),
+            redis=RuntimeRedisInfo(
+                host=resolved_settings.redis_host,
+                port=resolved_settings.redis_port,
+                password_configured=bool(resolved_settings.redis_password),
+            ),
+            toolchain=RuntimeToolchainInfo(
+                cxx=resolved_settings.cxx,
+                codegen_provider=resolved_settings.codegen_provider,
+            ),
+        )
 
     @app.post("/api/projects", response_model=ProjectRecord)
     def create_project(payload: CreateProjectRequest) -> ProjectRecord:
@@ -191,5 +228,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     return app
+
+
+def _module_available(module_name: str) -> bool:
+    return importlib.util.find_spec(module_name) is not None
+
 
 app = create_app()

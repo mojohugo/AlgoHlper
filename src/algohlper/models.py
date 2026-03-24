@@ -84,6 +84,40 @@ class GenerationValidationResult(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class RuntimeOpenAIInfo(BaseModel):
+    configured: bool = False
+    sdk_installed: bool = False
+    provider_available: bool = False
+    model: str = ""
+    base_url: str | None = None
+    reasoning_effort: str | None = None
+
+
+class RuntimeQueueInfo(BaseModel):
+    requested_backend: str
+    active_backend: str
+    worker_pool: str
+
+
+class RuntimeRedisInfo(BaseModel):
+    host: str
+    port: int
+    password_configured: bool = False
+
+
+class RuntimeToolchainInfo(BaseModel):
+    cxx: str
+    codegen_provider: str
+
+
+class RuntimeInfo(BaseModel):
+    api_time: datetime = Field(default_factory=utc_now)
+    openai: RuntimeOpenAIInfo
+    queue: RuntimeQueueInfo
+    redis: RuntimeRedisInfo
+    toolchain: RuntimeToolchainInfo
+
+
 class DuelFailure(BaseModel):
     round: int
     seed: int

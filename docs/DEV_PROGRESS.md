@@ -115,6 +115,8 @@
   - 产物代码标签页预览
   - 失败样例卡片
   - expected / actual 输出 diff 视图
+  - 运行环境诊断面板（OpenAI / 队列 / Redis / C++）
+  - 生成参数控制（provider / self-test / repair rounds）
 - 已新增 `scripts/start_web.ps1`，用于本地 Windows 启动前端。
 - 已做第一轮视觉重构：
   - hero 头部
@@ -147,6 +149,7 @@
 - `POST /api/projects/{project_id}/duel`
 - `GET /api/projects/{project_id}/duel-result`
 - `GET /api/tasks/{task_id}`
+- `GET /api/runtime`
 
 ### 7. CLI
 已提供命令：
@@ -158,6 +161,7 @@
 ### 8. 测试
 - 写了题面解析测试。
 - 写了 API 烟雾测试。
+- 写了运行环境接口测试，覆盖 `/api/runtime` 返回 OpenAI / 队列 / Redis / 工具链状态。
 - 写了对拍测试，能稳定发现错误程序的反例。
 - 写了资产自检测试，覆盖编译成功/失败路径。
 - 写了 OpenAI 自动回修测试，覆盖“首次生成失败、第二次修复成功”的路径。

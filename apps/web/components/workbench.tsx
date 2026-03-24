@@ -58,6 +58,32 @@ type TaskRecord = {
   error?: string | null;
 };
 
+type RuntimeInfo = {
+  api_time: string;
+  openai: {
+    configured: boolean;
+    sdk_installed: boolean;
+    provider_available: boolean;
+    model: string;
+    base_url?: string | null;
+    reasoning_effort?: string | null;
+  };
+  queue: {
+    requested_backend: string;
+    active_backend: string;
+    worker_pool: string;
+  };
+  redis: {
+    host: string;
+    port: number;
+    password_configured: boolean;
+  };
+  toolchain: {
+    cxx: string;
+    codegen_provider: string;
+  };
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
@@ -79,6 +105,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function Workbench() {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [runtime, setRuntime] = useState<RuntimeInfo | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [task, setTask] = useState<TaskRecord | null>(null);
   const [activeArtifact, setActiveArtifact] = useState("brute");
@@ -120,6 +147,8 @@ int main() {
 }
 `);
   const [provider, setProvider] = useState("auto");
+  const [selfTest, setSelfTest] = useState(true);
+  const [repairRounds, setRepairRounds] = useState("1");
   const [duelRounds, setDuelRounds] = useState("50");
   const [error, setError] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -130,7 +159,9 @@ int main() {
   );
 
   useEffect(() => {
-    void refreshProjects();
+    void runBusy(async () => {
+      await refreshDashboard();
+    });
   }, []);
 
   useEffect(() => {
@@ -176,6 +207,15 @@ int main() {
     } else if (nextProjects[0]?.id) {
       setSelectedProjectId(nextProjects[0].id);
     }
+  }
+
+  async function refreshRuntime() {
+    const nextRuntime = await apiFetch<RuntimeInfo>("/api/runtime");
+    setRuntime(nextRuntime);
+  }
+
+  async function refreshDashboard(preferredProjectId?: string) {
+    await Promise.all([refreshProjects(preferredProjectId), refreshRuntime()]);
   }
 
   async function createProject() {
@@ -247,8 +287,8 @@ int main() {
           method: "POST",
           body: JSON.stringify({
             provider,
-            self_test: true,
-            repair_rounds: 1,
+            self_test: selfTest,
+            repair_rounds: clampInt(repairRounds, 1, 0, 2),
           }),
         },
       );
@@ -307,6 +347,10 @@ int main() {
             <div className="headerMeta">
               <StatusBadge label={`API ${API_BASE_URL}`} tone="neutral" />
               <StatusBadge
+                label={runtime?.openai.provider_available ? "OpenAI 已就绪" : "OpenAI 未就绪"}
+                tone={runtime?.openai.provider_available ? "success" : "warning"}
+              />
+              <StatusBadge
                 label={busy ? "请求处理中" : "空闲"}
                 tone={busy ? "running" : "success"}
               />
@@ -344,7 +388,11 @@ int main() {
               <button className="button" onClick={() => void createProject()} disabled={busy}>
                 新建项目
               </button>
-              <button className="button secondary" onClick={() => void refreshProjects()} disabled={busy}>
+              <button
+                className="button secondary"
+                onClick={() => void runBusy(async () => refreshDashboard())}
+                disabled={busy}
+              >
                 刷新列表
               </button>
             </div>
@@ -378,6 +426,23 @@ int main() {
               {projects.length === 0 ? <div className="emptyState">还没有项目，先在上面建一个。</div> : null}
             </div>
           </section>
+
+          <section className="panel stack sidebarCard">
+            <div className="panelHeading">
+              <div>
+                <h2>运行环境</h2>
+                <p className="muted">当前 API、OpenAI、队列和本地工具链状态。</p>
+              </div>
+              <button
+                className="button secondary buttonSmall"
+                onClick={() => void runBusy(async () => refreshRuntime())}
+                disabled={busy}
+              >
+                刷新
+              </button>
+            </div>
+            <RuntimePanel runtime={runtime} />
+          </section>
         </aside>
 
         <section className="content stack">
@@ -403,6 +468,18 @@ int main() {
               title="对拍轮数"
               value={duelRounds}
               meta="当前发起参数"
+            />
+            <MetricCard
+              title="生成策略"
+              value={`${provider} / ${selfTest ? "self-test" : "fast"}`}
+              meta={`repair ${clampInt(repairRounds, 1, 0, 2)}`}
+              tone={runtime?.openai.provider_available ? "success" : "warning"}
+            />
+            <MetricCard
+              title="任务后端"
+              value={runtime?.queue.active_backend ?? "unknown"}
+              meta={`requested ${runtime?.queue.requested_backend ?? "-"}`}
+              tone={getStatusTone(runtime?.queue.active_backend)}
             />
           </section>
 
@@ -432,6 +509,22 @@ int main() {
                     <option value="template">template</option>
                     <option value="openai">openai</option>
                   </select>
+                </label>
+                <label className="field compactField fieldShort">
+                  <span className="fieldLabel">回修轮数</span>
+                  <input
+                    className="input"
+                    value={repairRounds}
+                    onChange={(event) => setRepairRounds(event.target.value)}
+                  />
+                </label>
+                <label className="toggleField">
+                  <input
+                    type="checkbox"
+                    checked={selfTest}
+                    onChange={(event) => setSelfTest(event.target.checked)}
+                  />
+                  <span>生成后自检</span>
                 </label>
                 <button className="button secondary" onClick={() => void startGenerate()} disabled={busy || !selectedProjectId}>
                   异步生成
@@ -566,6 +659,57 @@ int main() {
         </section>
       </section>
     </main>
+  );
+}
+
+function RuntimePanel({ runtime }: { runtime: RuntimeInfo | null }) {
+  if (!runtime) {
+    return <div className="emptyState">正在读取运行环境…</div>;
+  }
+
+  const queueFallback =
+    runtime.queue.requested_backend !== runtime.queue.active_backend
+      ? `已从 ${runtime.queue.requested_backend} 回退到 ${runtime.queue.active_backend}`
+      : "";
+
+  return (
+    <div className="stack">
+      <div className="runtimeGrid">
+        <InfoItem label="OpenAI" value={runtime.openai.provider_available ? "ready" : "not ready"} />
+        <InfoItem label="Model" value={runtime.openai.model || "-"} />
+        <InfoItem label="Queue" value={runtime.queue.active_backend} />
+        <InfoItem label="C++" value={runtime.toolchain.cxx} />
+      </div>
+
+      <div className="stack subtleCard">
+        <div className="metaRow">
+          <StatusBadge
+            label={runtime.openai.provider_available ? "OpenAI 可用" : "OpenAI 不可用"}
+            tone={runtime.openai.provider_available ? "success" : "warning"}
+          />
+          <StatusBadge
+            label={runtime.openai.sdk_installed ? "SDK 已安装" : "SDK 未安装"}
+            tone={runtime.openai.sdk_installed ? "success" : "warning"}
+          />
+        </div>
+        <div className="muted">base_url：{runtime.openai.base_url ?? "官方默认"}</div>
+        <div className="muted">reasoning：{runtime.openai.reasoning_effort ?? "-"}</div>
+      </div>
+
+      <div className="stack subtleCard">
+        <div className="metaRow">
+          <StatusBadge label={`queue ${runtime.queue.active_backend}`} tone={getStatusTone(runtime.queue.active_backend)} />
+          <StatusBadge label={`pool ${runtime.queue.worker_pool}`} tone="neutral" />
+        </div>
+        <div className="muted">
+          Redis：{runtime.redis.host}:{runtime.redis.port}
+          {runtime.redis.password_configured ? " / 已配置密码" : " / 未配置密码"}
+        </div>
+        <div className="muted">默认 provider：{runtime.toolchain.codegen_provider}</div>
+      </div>
+
+      {queueFallback ? <div className="banner bannerWarn">{queueFallback}</div> : null}
+    </div>
   );
 }
 
@@ -788,6 +932,14 @@ function asErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function clampInt(value: string, fallback: number, min: number, max: number): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, parsed));
+}
+
 function getArtifactEntries(artifacts: Record<string, ArtifactRecord>): Array<[string, ArtifactRecord]> {
   const preferredOrder = ["brute", "generator", "user_solution", "compare", "readme"];
   return Object.entries(artifacts).sort(
@@ -832,6 +984,7 @@ function getStatusTone(status?: string | null): BadgeTone {
     case "ready":
     case "parsed":
     case "counterexample_found":
+    case "celery":
       return "success";
     case "running":
     case "dueling":
@@ -839,6 +992,8 @@ function getStatusTone(status?: string | null): BadgeTone {
     case "generating":
     case "self_testing":
       return "running";
+    case "inprocess":
+      return "warning";
     case "failed":
     case "error":
       return "error";

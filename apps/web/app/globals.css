@@ -196,6 +196,22 @@ button {
   min-width: 110px;
 }
 
+.toggleField {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.42);
+  color: var(--text-soft);
+}
+
+.toggleField input {
+  accent-color: var(--blue);
+}
+
 .input,
 .textarea,
 .select {
@@ -283,6 +299,12 @@ button {
   transform: none;
 }
 
+.buttonSmall {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
 .projectList {
   display: grid;
   gap: 12px;
@@ -332,7 +354,7 @@ button {
 
 .metricGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -498,6 +520,20 @@ button {
 .infoValue {
   margin-top: 4px;
   font-weight: 600;
+  word-break: break-word;
+}
+
+.runtimeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.subtleCard {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2, 6, 23, 0.3);
 }
 
 .tabs {
@@ -552,6 +588,12 @@ button {
   background: rgba(20, 83, 45, 0.26);
   border-color: rgba(34, 197, 94, 0.22);
   color: #bbf7d0;
+}
+
+.bannerWarn {
+  background: rgba(120, 53, 15, 0.2);
+  border-color: rgba(245, 158, 11, 0.24);
+  color: #fde68a;
 }
 
 .warningList {
@@ -653,7 +695,7 @@ button {
 
 @media (max-width: 1280px) {
   .metricGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .editorGrid,
@@ -686,7 +728,8 @@ button {
   }
 
   .metricGrid,
-  .cardGrid {
+  .cardGrid,
+  .runtimeGrid {
     grid-template-columns: 1fr;
   }
 }
