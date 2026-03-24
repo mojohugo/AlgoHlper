@@ -50,6 +50,24 @@
   - 上一轮生成代码
 - 当前默认回修 1 轮，且上限限制在 2 轮以内。
 
+### 4.4 Codex 配置兼容
+- 现在会兼容读取 `CODEX_API_KEY`。
+- 现在会读取 `C:\Users\mojo_\.codex\config.toml` 中的：
+  - `model`
+  - `model_reasoning_effort`
+  - `model_providers.<provider>.base_url`
+  - `model_providers.<provider>.env_key`
+- 这样本地已经配好的 Codex 环境，可以直接给项目复用。
+
+### 6.1 异步任务骨架
+- 新增进程内异步任务队列骨架（ThreadPoolExecutor）。
+- 新增接口：
+  - `POST /api/projects/{project_id}/parse-async`
+  - `POST /api/projects/{project_id}/generate-artifacts-async`
+  - `POST /api/projects/{project_id}/duel-async`
+- 当前这是 MVP 级骨架，目标是先把同步 API 改成“发任务 + 查状态”的工作流。
+- 这不是最终方案；后续应替换为 Redis + Celery/worker。
+
 ### 5. 本地对拍内核
 - 实现了 C++ 编译与执行封装，基于本机 `g++`。
 - 实现了标准对拍循环：`gen -> brute -> user -> compare`。
@@ -87,9 +105,12 @@
 - 写了对拍测试，能稳定发现错误程序的反例。
 - 写了资产自检测试，覆盖编译成功/失败路径。
 - 写了 OpenAI 自动回修测试，覆盖“首次生成失败、第二次修复成功”的路径。
+- 写了配置兼容测试，覆盖 `CODEX_API_KEY` / `.codex/config.toml`。
+- 写了异步 API 测试，覆盖任务提交和轮询完成。
 
 ## 当前明确未完成
 
+- 当前异步任务还是进程内线程池，不具备跨进程 worker、重试、持久队列能力。
 - `openai provider` 已有基础自检和单轮自动回修，但还没有做更严格的 schema 约束、样例不足时的补测策略、以及多轮稳定性治理。
 - 没有 PostgreSQL / Redis / Celery。
 - 没有 Docker / gVisor Runner。

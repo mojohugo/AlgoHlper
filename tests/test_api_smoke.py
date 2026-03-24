@@ -1,3 +1,5 @@
+import time
+
 from fastapi.testclient import TestClient
 
 from algohlper.api.app import create_app
@@ -89,3 +91,44 @@ max(a, b)
     assert "brute" in payload["artifacts"]
     assert payload["warnings"]
     assert payload["validation"]["skipped"] is True
+
+
+def test_api_async_generate_task_completes(tmp_path) -> None:
+    app = create_app(Settings(data_dir=tmp_path, cxx="g++"))
+    client = TestClient(app)
+
+    project = client.post("/api/projects", json={"name": "demo-async"}).json()
+    project_id = project["id"]
+    problem = """# Async Problem
+
+题目描述
+输出输入值。
+
+输入格式
+```text
+n
+```
+
+输出格式
+```text
+n
+```
+"""
+    client.post(
+        f"/api/projects/{project_id}/problem-text",
+        json={"content": problem, "format": "markdown"},
+    )
+    response = client.post(
+        f"/api/projects/{project_id}/generate-artifacts-async",
+        json={"provider": "template"},
+    )
+    assert response.status_code == 200
+    task_id = response.json()["task"]["id"]
+
+    for _ in range(30):
+        task_response = client.get(f"/api/tasks/{task_id}")
+        task = task_response.json()
+        if task["status"] in {"completed", "failed"}:
+            break
+        time.sleep(0.1)
+    assert task["status"] == "completed"

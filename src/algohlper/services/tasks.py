@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from algohlper.models import TaskLog, TaskRecord, TaskType
+from algohlper.models import TaskLog, TaskRecord, TaskStatus, TaskType
 from algohlper.services.storage import JsonFileStore
 from algohlper.utils import utc_now
 
@@ -9,15 +9,30 @@ class TaskTracker:
     def __init__(self, store: JsonFileStore):
         self.store = store
 
-    def create(self, project_id: str, task_type: TaskType, stage: str) -> TaskRecord:
+    def create(
+        self,
+        project_id: str,
+        task_type: TaskType,
+        stage: str,
+        *,
+        status: TaskStatus = "running",
+    ) -> TaskRecord:
         task = TaskRecord(
             id=self.store._next_id("tsk"),
             project_id=project_id,
             type=task_type,
-            status="running",
+            status=status,
             current_stage=stage,
             progress=0,
         )
+        self.store.save_task(task)
+        return task
+
+    def start(self, task_id: str, *, current_stage: str, progress: int = 0) -> TaskRecord:
+        task = self.store.require_task(task_id)
+        task.status = "running"
+        task.current_stage = current_stage
+        task.progress = progress
         self.store.save_task(task)
         return task
 

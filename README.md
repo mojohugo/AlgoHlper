@@ -10,6 +10,8 @@
 - 可插拔代码生成器：新增 `template / openai / auto` 三种 provider 入口。未配置 OpenAI 时，`auto` 会自动回退到模板生成器。
 - 生成后自检：对 `openai provider` 生成的 `brute.cpp` / `gen.cpp` 会先做编译检查、generator smoke test、样例回放，再决定是否落库。
 - 自动回修：如果 `openai provider` 首次生成未通过自检，会带着编译日志和样例失败信息自动回修 1 轮（可调）。
+- Codex 环境兼容：现在会自动兼容 `CODEX_API_KEY`，并读取 `C:\Users\mojo_\.codex\config.toml` 里的 `base_url / model / reasoning` 配置。
+- 异步任务骨架：新增 `parse-async / generate-artifacts-async / duel-async` 三个接口，先用进程内队列跑任务。
 - C++ 对拍引擎：调用本机 `g++` 编译 `brute.cpp` / `gen.cpp` / `main.cpp`，执行多轮随机对拍并返回首个失败样例。
 - FastAPI 接口：项目、题面上传、解析、资产写入、starter 资产生成、对拍、任务查询。
 - CLI：支持 `parse`、`starter`、`generate`、`duel` 四个命令。
@@ -33,6 +35,13 @@ python -m pip install -e .[dev]
 # python -m pip install -e .[dev,openai]
 uvicorn algohlper.api.app:app --app-dir src --reload
 ```
+
+如果你本机已经在 Codex 里配置了：
+
+- 环境变量：`CODEX_API_KEY`
+- 配置文件：`C:\Users\mojo_\.codex\config.toml`
+
+那现在 `AlgoHlper` 会直接复用这套配置，不需要再单独补 `OPENAI_API_KEY`。
 
 打开：<http://127.0.0.1:8000/docs>
 
@@ -79,9 +88,11 @@ algohlper duel --brute .\out\brute.cpp --generator .\out\gen.cpp --user .\main.c
 2. `POST /api/projects/{project_id}/problem-text`
 3. `POST /api/projects/{project_id}/parse`
 4. `POST /api/projects/{project_id}/generate-artifacts`
-5. `POST /api/projects/{project_id}/artifacts` 覆盖 `brute` / `generator` / `user_solution`
-6. `POST /api/projects/{project_id}/duel`
-7. `GET /api/tasks/{task_id}` 或 `GET /api/projects/{project_id}/duel-result`
+5. `POST /api/projects/{project_id}/generate-artifacts-async`
+6. `POST /api/projects/{project_id}/artifacts` 覆盖 `brute` / `generator` / `user_solution`
+7. `POST /api/projects/{project_id}/duel`
+8. `POST /api/projects/{project_id}/duel-async`
+9. `GET /api/tasks/{task_id}` 或 `GET /api/projects/{project_id}/duel-result`
 
 ## 推荐下一个开发步骤
 
