@@ -503,7 +503,7 @@ int main() {
                 >
                   <div className="projectTop">
                     <strong>{project.name}</strong>
-                    <StatusBadge label={project.status} tone={getStatusTone(project.status)} />
+                    <StatusBadge label={humanizeStatus(project.status)} tone={getStatusTone(project.status)} />
                   </div>
                   <div className="muted mono">{project.id}</div>
                   <div className="projectMeta">updated {formatTime(project.updated_at)}</div>
@@ -544,14 +544,18 @@ int main() {
                 />
                 <MetricCard
                   title="项目状态"
-                  value={selectedProject?.status ?? "draft"}
+                  value={humanizeStatus(selectedProject?.status ?? "draft")}
                   meta={`artifacts ${Object.keys(selectedProject?.artifacts ?? {}).length}`}
                   tone={getStatusTone(selectedProject?.status)}
                 />
                 <MetricCard
                   title="最近任务"
-                  value={task?.type ?? "none"}
-                  meta={task ? `${task.status} / ${task.current_stage ?? "-"}` : "等待任务"}
+                  value={task ? humanizeTaskType(task.type) : "无"}
+                  meta={
+                    task
+                      ? `${humanizeStatus(task.status)} / ${humanizeTaskStage(task.current_stage)}`
+                      : "等待任务"
+                  }
                   tone={getStatusTone(task?.status)}
                 />
                 <MetricCard
@@ -562,13 +566,13 @@ int main() {
                 />
                 <MetricCard
                   title="任务后端"
-                  value={runtime?.queue.active_backend ?? "unknown"}
+                  value={humanizeStatus(runtime?.queue.active_backend ?? "unknown")}
                   meta={`requested ${runtime?.queue.requested_backend ?? "-"}`}
                   tone={getStatusTone(runtime?.queue.active_backend)}
                 />
                 <MetricCard
                   title="最近对拍"
-                  value={selectedProject?.last_duel_result?.status ?? "none"}
+                  value={humanizeStatus(selectedProject?.last_duel_result?.status ?? "none")}
                   meta={
                     selectedProject?.last_duel_result
                       ? `${selectedProject.last_duel_result.rounds_completed}/${selectedProject.last_duel_result.rounds_requested}`
@@ -766,7 +770,7 @@ int main() {
                     <p className="muted">结构化题面和生成资产是同一个阶段，所以放在一起。</p>
                   </div>
                   {selectedProject ? (
-                    <StatusBadge label={selectedProject.status} tone={getStatusTone(selectedProject.status)} />
+                    <StatusBadge label={humanizeStatus(selectedProject.status)} tone={getStatusTone(selectedProject.status)} />
                   ) : null}
                 </div>
                 {selectedProject ? (
@@ -866,7 +870,7 @@ function RuntimePanel({ runtime }: { runtime: RuntimeInfo | null }) {
 
   const queueFallback =
     runtime.queue.requested_backend !== runtime.queue.active_backend
-      ? `已从 ${runtime.queue.requested_backend} 回退到 ${runtime.queue.active_backend}`
+      ? `已从 ${humanizeStatus(runtime.queue.requested_backend)} 回退到 ${humanizeStatus(runtime.queue.active_backend)}`
       : "";
 
   return (
@@ -874,7 +878,7 @@ function RuntimePanel({ runtime }: { runtime: RuntimeInfo | null }) {
       <div className="runtimeGrid">
         <InfoItem label="OpenAI" value={runtime.openai.provider_available ? "ready" : "not ready"} />
         <InfoItem label="Model" value={runtime.openai.model || "-"} />
-        <InfoItem label="Queue" value={runtime.queue.active_backend} />
+        <InfoItem label="Queue" value={humanizeStatus(runtime.queue.active_backend)} />
         <InfoItem label="C++" value={runtime.toolchain.cxx} />
       </div>
 
@@ -895,7 +899,10 @@ function RuntimePanel({ runtime }: { runtime: RuntimeInfo | null }) {
 
       <div className="stack subtleCard">
         <div className="metaRow">
-          <StatusBadge label={`queue ${runtime.queue.active_backend}`} tone={getStatusTone(runtime.queue.active_backend)} />
+          <StatusBadge
+            label={`queue ${humanizeStatus(runtime.queue.active_backend)}`}
+            tone={getStatusTone(runtime.queue.active_backend)}
+          />
           <StatusBadge label={`pool ${runtime.queue.worker_pool}`} tone="neutral" />
         </div>
         <div className="muted">
@@ -950,14 +957,14 @@ function TaskPanel({ task }: { task: TaskRecord | null }) {
           <p className="muted">异步任务状态、阶段和日志。</p>
         </div>
         {task ? (
-          <StatusBadge label={`${task.status} · ${task.progress}%`} tone={getStatusTone(task.status)} />
+          <StatusBadge label={`${humanizeStatus(task.status)} · ${task.progress}%`} tone={getStatusTone(task.status)} />
         ) : null}
       </div>
       {task ? (
         <>
           <div className="metaRow">
-            <StatusBadge label={task.type} tone="neutral" />
-            <StatusBadge label={task.current_stage ?? "-"} tone="neutral" />
+            <StatusBadge label={humanizeTaskType(task.type)} tone="neutral" />
+            <StatusBadge label={humanizeTaskStage(task.current_stage)} tone="neutral" />
             <StatusBadge label={`progress ${task.progress}%`} tone="running" />
           </div>
           {task.error ? <div className="banner bannerError">{task.error}</div> : null}
@@ -1002,7 +1009,7 @@ function ProjectSummaryPanel({
           <h2>项目概览</h2>
           <p className="muted">把最常看的项目信息集中到一张卡里。</p>
         </div>
-        <StatusBadge label={project.status} tone={getStatusTone(project.status)} />
+        <StatusBadge label={humanizeStatus(project.status)} tone={getStatusTone(project.status)} />
       </div>
 
       <div className="cardGrid">
@@ -1202,7 +1209,7 @@ function DuelResultPanel({
   return (
     <div className="stack">
       <div className="metaRow">
-        <StatusBadge label={result.status} tone={getStatusTone(result.status)} />
+        <StatusBadge label={humanizeStatus(result.status)} tone={getStatusTone(result.status)} />
         <StatusBadge label={`rounds ${result.rounds_completed}/${result.rounds_requested}`} tone="neutral" />
       </div>
       <div>{result.summary}</div>
@@ -1471,18 +1478,104 @@ function normalizeLines(text: string): string[] {
 function humanizeReason(reason: string): string {
   switch (reason) {
     case "wrong_answer":
-      return "Wrong Answer";
+      return "输出不一致";
     case "user_runtime_error":
-      return "User Runtime Error";
+      return "用户程序运行错误";
     case "user_timed_out":
-      return "User Timed Out";
+      return "用户程序超时";
     case "generator_runtime_error":
-      return "Generator Runtime Error";
+      return "数据生成器运行错误";
     case "brute_runtime_error":
-      return "Brute Runtime Error";
+      return "暴力程序运行错误";
     default:
-      return reason;
+      return humanizeIdentifier(reason);
   }
+}
+
+function humanizeStatus(status?: string | null): string {
+  switch (status) {
+    case "draft":
+      return "草稿";
+    case "parsed":
+      return "已解析";
+    case "ready":
+      return "已就绪";
+    case "queued":
+      return "排队中";
+    case "running":
+      return "运行中";
+    case "completed":
+      return "已完成";
+    case "failed":
+      return "失败";
+    case "error":
+      return "错误";
+    case "generating":
+      return "生成中";
+    case "self_testing":
+      return "自检中";
+    case "dueling":
+      return "对拍中";
+    case "counterexample_found":
+      return "发现反例";
+    case "inprocess":
+      return "进程内";
+    case "celery":
+      return "Celery";
+    case "none":
+      return "无";
+    case "unknown":
+      return "未知";
+    default:
+      return humanizeIdentifier(status);
+  }
+}
+
+function humanizeTaskType(taskType?: string | null): string {
+  switch (taskType) {
+    case "parse":
+      return "解析题面";
+    case "starter_assets":
+      return "生成资产";
+    case "duel":
+      return "执行对拍";
+    default:
+      return humanizeIdentifier(taskType);
+  }
+}
+
+function humanizeTaskStage(stage?: string | null): string {
+  switch (stage) {
+    case "queued":
+      return "排队中";
+    case "normalize_problem":
+      return "标准化题面";
+    case "extract_problem_spec":
+      return "提取 ProblemSpec";
+    case "generate_templates":
+      return "生成模板";
+    case "compile":
+      return "编译中";
+    case "counterexample_found":
+      return "发现反例";
+    case "completed":
+      return "已完成";
+    case "parse_failed":
+      return "解析失败";
+    case "generate_failed":
+      return "生成失败";
+    case "duel_failed":
+      return "对拍失败";
+    default:
+      return humanizeIdentifier(stage);
+  }
+}
+
+function humanizeIdentifier(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+  return value.replace(/_/g, " ");
 }
 
 type BadgeTone = "neutral" | "success" | "running" | "warning" | "error";
