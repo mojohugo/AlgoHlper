@@ -25,6 +25,10 @@ dev = [
 openai = [
   "openai>=1.79.0,<2.0"
 ]
+queue = [
+  "celery>=5.4,<6.0",
+  "redis>=5.0,<6.0"
+]
 
 [project.scripts]
 algohlper = "algohlper.cli:main"

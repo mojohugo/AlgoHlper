@@ -13,6 +13,10 @@ class Settings:
     compile_args: tuple[str, ...] = ("-O2", "-std=c++17", "-pipe")
     default_time_limit_ms: int = 1000
     max_output_bytes: int = 200_000
+    task_queue_backend: str = "inprocess"
+    inprocess_workers: int = 4
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_result_backend: str = "redis://localhost:6379/1"
     codegen_provider: str = "template"
     openai_api_key: str | None = None
     openai_model: str = "gpt-5.4"
@@ -34,6 +38,10 @@ class Settings:
         )
         default_time_limit_ms = int(os.getenv("ALGOHLPER_DEFAULT_TIME_LIMIT_MS", "1000"))
         max_output_bytes = int(os.getenv("ALGOHLPER_MAX_OUTPUT_BYTES", "200000"))
+        task_queue_backend = os.getenv("ALGOHLPER_TASK_QUEUE_BACKEND", "inprocess")
+        inprocess_workers = int(os.getenv("ALGOHLPER_INPROCESS_WORKERS", "4"))
+        celery_broker_url = os.getenv("ALGOHLPER_CELERY_BROKER_URL", "redis://localhost:6379/0")
+        celery_result_backend = os.getenv("ALGOHLPER_CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
         codegen_provider = os.getenv("ALGOHLPER_CODEGEN_PROVIDER", "template")
         openai_api_key = (
             os.getenv("OPENAI_API_KEY")
@@ -65,6 +73,10 @@ class Settings:
             compile_args=compile_args,
             default_time_limit_ms=default_time_limit_ms,
             max_output_bytes=max_output_bytes,
+            task_queue_backend=task_queue_backend,
+            inprocess_workers=inprocess_workers,
+            celery_broker_url=celery_broker_url,
+            celery_result_backend=celery_result_backend,
             codegen_provider=codegen_provider,
             openai_api_key=openai_api_key,
             openai_model=openai_model,

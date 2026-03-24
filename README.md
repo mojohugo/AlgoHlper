@@ -12,6 +12,7 @@
 - 自动回修：如果 `openai provider` 首次生成未通过自检，会带着编译日志和样例失败信息自动回修 1 轮（可调）。
 - Codex 环境兼容：现在会自动兼容 `CODEX_API_KEY`，并读取 `C:\Users\mojo_\.codex\config.toml` 里的 `base_url / model / reasoning` 配置。
 - 异步任务骨架：新增 `parse-async / generate-artifacts-async / duel-async` 三个接口，先用进程内队列跑任务。
+- 队列后端抽象：现在支持 `inprocess / celery` 两种后端入口；未安装 Celery 或未配置时会回退到 `inprocess`。
 - C++ 对拍引擎：调用本机 `g++` 编译 `brute.cpp` / `gen.cpp` / `main.cpp`，执行多轮随机对拍并返回首个失败样例。
 - FastAPI 接口：项目、题面上传、解析、资产写入、starter 资产生成、对拍、任务查询。
 - CLI：支持 `parse`、`starter`、`generate`、`duel` 四个命令。
@@ -33,6 +34,8 @@ python -m venv .venv
 python -m pip install -e .[dev]
 # 如果你要启用 OpenAI 代码生成 provider：
 # python -m pip install -e .[dev,openai]
+# 如果你要启用 Celery / Redis 队列：
+# python -m pip install -e .[dev,queue]
 uvicorn algohlper.api.app:app --app-dir src --reload
 ```
 
@@ -42,6 +45,28 @@ uvicorn algohlper.api.app:app --app-dir src --reload
 - 配置文件：`C:\Users\mojo_\.codex\config.toml`
 
 那现在 `AlgoHlper` 会直接复用这套配置，不需要再单独补 `OPENAI_API_KEY`。
+
+## 队列后端
+
+默认：
+
+```powershell
+$env:ALGOHLPER_TASK_QUEUE_BACKEND="inprocess"
+```
+
+如果你准备切到 Celery：
+
+```powershell
+$env:ALGOHLPER_TASK_QUEUE_BACKEND="celery"
+$env:ALGOHLPER_CELERY_BROKER_URL="redis://127.0.0.1:6379/0"
+$env:ALGOHLPER_CELERY_RESULT_BACKEND="redis://127.0.0.1:6379/1"
+```
+
+Worker 启动命令：
+
+```powershell
+celery -A algohlper.worker.tasks.celery_app worker --loglevel=info
+```
 
 打开：<http://127.0.0.1:8000/docs>
 

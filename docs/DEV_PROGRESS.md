@@ -68,6 +68,20 @@
 - 当前这是 MVP 级骨架，目标是先把同步 API 改成“发任务 + 查状态”的工作流。
 - 这不是最终方案；后续应替换为 Redis + Celery/worker。
 
+### 6.2 队列后端抽象
+- 已把任务提交层抽成统一队列接口。
+- 当前支持两种 backend：
+  - `inprocess`
+  - `celery`
+- 当前行为：
+  - 如果设置 `ALGOHLPER_TASK_QUEUE_BACKEND=celery` 且安装了 Celery，则走 Celery task
+  - 否则自动回退到 `inprocess`
+- 已增加：
+  - `src/algohlper/services/task_queue.py`
+  - `src/algohlper/services/job_runner.py`
+  - `src/algohlper/worker/celery_app.py`
+  - `src/algohlper/worker/tasks.py`
+
 ### 5. 本地对拍内核
 - 实现了 C++ 编译与执行封装，基于本机 `g++`。
 - 实现了标准对拍循环：`gen -> brute -> user -> compare`。
@@ -107,10 +121,11 @@
 - 写了 OpenAI 自动回修测试，覆盖“首次生成失败、第二次修复成功”的路径。
 - 写了配置兼容测试，覆盖 `CODEX_API_KEY` / `.codex/config.toml`。
 - 写了异步 API 测试，覆盖任务提交和轮询完成。
+- 写了队列 backend 测试，覆盖 Celery 不可用时自动回退到 in-process。
 
 ## 当前明确未完成
 
-- 当前异步任务还是进程内线程池，不具备跨进程 worker、重试、持久队列能力。
+- Celery/Redis 目前还是“可切换骨架”，还没补 docker-compose、真正 Redis 联调、任务重试策略和 worker 运行文档细节。
 - `openai provider` 已有基础自检和单轮自动回修，但还没有做更严格的 schema 约束、样例不足时的补测策略、以及多轮稳定性治理。
 - 没有 PostgreSQL / Redis / Celery。
 - 没有 Docker / gVisor Runner。
