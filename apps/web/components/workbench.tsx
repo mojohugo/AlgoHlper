@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { CodeEditor } from "./code-editor";
+import { CopyButton } from "./copy-button";
+
 type ArtifactRecord = {
   type: string;
   language: string;
@@ -556,17 +559,23 @@ int main() {
                     <h3>题面</h3>
                     <div className="muted">Markdown / text / LaTeX 文本输入。</div>
                   </div>
+                  <div className="editorActions">
+                    <CopyButton text={problemText} label="复制题面" />
+                  </div>
                 </div>
-                <textarea className="textarea editorArea" value={problemText} onChange={(event) => setProblemText(event.target.value)} />
+                <CodeEditor value={problemText} language="markdown" onChange={setProblemText} height={420} />
               </div>
               <div className="editorCard">
                 <div className="editorHeader">
                   <div>
                     <h3>用户代码</h3>
-                    <div className="muted">当前先用纯文本编辑，后面再切 Monaco。</div>
+                    <div className="muted">C++ 编辑区，支持直接保存到 user_solution。</div>
+                  </div>
+                  <div className="editorActions">
+                    <CopyButton text={userCode} label="复制代码" />
                   </div>
                 </div>
-                <textarea className="textarea editorArea" value={userCode} onChange={(event) => setUserCode(event.target.value)} />
+                <CodeEditor value={userCode} language="cpp" onChange={setUserCode} height={420} />
               </div>
             </div>
           </section>
@@ -618,12 +627,25 @@ int main() {
                       label={`${Object.keys(selectedProject.artifacts ?? {}).length} artifacts`}
                       tone="neutral"
                     />
+                    <CopyButton
+                      text={
+                        selectedProject.problem_spec
+                          ? JSON.stringify(selectedProject.problem_spec, null, 2)
+                          : "ProblemSpec 尚未生成"
+                      }
+                      label="复制 Spec"
+                    />
                   </div>
-                  <div className="pre projectSpec">
-                    {selectedProject.problem_spec
-                      ? JSON.stringify(selectedProject.problem_spec, null, 2)
-                      : "ProblemSpec 尚未生成"}
-                  </div>
+                  <CodeEditor
+                    value={
+                      selectedProject.problem_spec
+                        ? JSON.stringify(selectedProject.problem_spec, null, 2)
+                        : "ProblemSpec 尚未生成"
+                    }
+                    language="json"
+                    readOnly
+                    height={360}
+                  />
                 </>
               ) : (
                 <div className="emptyState">请选择项目。</div>
@@ -760,7 +782,23 @@ function ArtifactTabs({
           </button>
         ))}
       </div>
-      <div className="code artifactCode">{artifact?.code ?? "当前没有可预览的产物。"}</div>
+      {artifact ? (
+        <div className="stack">
+          <div className="metaRow">
+            <StatusBadge label={artifact.type} tone="neutral" />
+            <StatusBadge label={artifact.language} tone="neutral" />
+            <CopyButton text={artifact.code} label="复制产物" />
+          </div>
+          <CodeEditor
+            value={artifact.code}
+            language={toEditorLanguage(artifact.language, artifact.type)}
+            readOnly
+            height={420}
+          />
+        </div>
+      ) : (
+        <div className="emptyState">当前没有可预览的产物。</div>
+      )}
     </div>
   );
 }
@@ -801,11 +839,22 @@ function DuelResultPanel({ result }: { result: DuelResult | null }) {
               <InfoItem label="mode" value={failure.mode} />
               <InfoItem label="size" value={String(failure.size)} />
             </div>
-            {failure.stderr ? <div className="pre">{failure.stderr}</div> : null}
+            {failure.stderr ? (
+              <div className="stack">
+                <div className="metaRow">
+                  <div className="pill">stderr</div>
+                  <CopyButton text={failure.stderr} label="复制 stderr" />
+                </div>
+                <CodeEditor value={failure.stderr} language="plaintext" readOnly height={160} />
+              </div>
+            ) : null}
           </div>
           <div className="stack">
-            <h3>输入</h3>
-            <div className="pre">{failure.input || "(empty)"}</div>
+            <div className="sectionHeader">
+              <h3>输入</h3>
+              <CopyButton text={failure.input || ""} label="复制输入" />
+            </div>
+            <CodeEditor value={failure.input || "(empty)"} language="plaintext" readOnly height={180} />
           </div>
           <DiffViewer expected={failure.expected_output} actual={failure.actual_output} />
           {Object.keys(result.compile_logs).length > 0 ? (
@@ -813,8 +862,11 @@ function DuelResultPanel({ result }: { result: DuelResult | null }) {
               <h3>编译日志</h3>
               {Object.entries(result.compile_logs).map(([name, log]) => (
                 <div key={name} className="stack">
-                  <div className="pill">{name}</div>
-                  <div className="pre">{log || "(empty)"}</div>
+                  <div className="metaRow">
+                    <div className="pill">{name}</div>
+                    <CopyButton text={log || ""} label="复制日志" />
+                  </div>
+                  <CodeEditor value={log || "(empty)"} language="plaintext" readOnly height={180} />
                 </div>
               ))}
             </div>
@@ -840,7 +892,13 @@ function DiffViewer({
 
   return (
     <div className="stack">
-      <h3>输出对比</h3>
+      <div className="sectionHeader">
+        <h3>输出对比</h3>
+        <div className="inlineActions">
+          <CopyButton text={expected} label="复制 expected" />
+          <CopyButton text={actual} label="复制 actual" />
+        </div>
+      </div>
       <div className="diffGrid">
         <div className="diffCol">
           <div className="pill">expected</div>
@@ -938,6 +996,29 @@ function clampInt(value: string, fallback: number, min: number, max: number): nu
     return fallback;
   }
   return Math.min(max, Math.max(min, parsed));
+}
+
+function toEditorLanguage(language: string, artifactType?: string): string {
+  const normalized = language.toLowerCase();
+  if (normalized === "cpp" || normalized === "c++") {
+    return "cpp";
+  }
+  if (normalized === "py" || normalized === "python") {
+    return "python";
+  }
+  if (normalized === "md" || normalized === "markdown") {
+    return "markdown";
+  }
+  if (normalized === "json") {
+    return "json";
+  }
+  if (artifactType === "readme") {
+    return "markdown";
+  }
+  if (artifactType === "compare") {
+    return "python";
+  }
+  return "plaintext";
 }
 
 function getArtifactEntries(artifacts: Record<string, ArtifactRecord>): Array<[string, ArtifactRecord]> {

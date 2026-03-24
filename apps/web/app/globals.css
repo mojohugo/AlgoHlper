@@ -411,8 +411,39 @@ button {
   gap: 12px;
 }
 
+.editorHeader,
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
 .editorHeader h3 {
   margin: 0 0 4px;
+}
+
+.editorActions,
+.inlineActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editorSurface {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 41, 59, 0.92);
+  background: rgba(2, 6, 23, 0.72);
+}
+
+.editorLoading {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  background: rgba(2, 6, 23, 0.52);
 }
 
 .code,

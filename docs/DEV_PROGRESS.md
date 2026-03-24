@@ -117,6 +117,8 @@
   - expected / actual 输出 diff 视图
   - 运行环境诊断面板（OpenAI / 队列 / Redis / C++）
   - 生成参数控制（provider / self-test / repair rounds）
+  - Monaco 编辑器接入（题面 / 用户代码 / 产物 / Spec / 日志）
+  - 一键复制（题面 / 代码 / 产物 / 反例输入 / expected / actual / 编译日志）
 - 已新增 `scripts/start_web.ps1`，用于本地 Windows 启动前端。
 - 已做第一轮视觉重构：
   - hero 头部
