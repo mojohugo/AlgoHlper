@@ -115,6 +115,8 @@ type QuickRunResult = {
   timed_out: boolean;
 };
 
+type WorkspaceTab = "overview" | "edit" | "assets" | "run";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
@@ -139,6 +141,7 @@ export function Workbench() {
   const [runtime, setRuntime] = useState<RuntimeInfo | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [task, setTask] = useState<TaskRecord | null>(null);
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("edit");
   const [activeArtifact, setActiveArtifact] = useState("brute");
   const [projectName, setProjectName] = useState("Demo Project");
   const [specDraft, setSpecDraft] = useState<ProblemSpec>(emptyProblemSpec());
@@ -323,6 +326,7 @@ int main() {
         { method: "POST" },
       );
       setTask(response.task);
+      setWorkspaceTab("assets");
     });
   }
 
@@ -344,6 +348,7 @@ int main() {
         },
       );
       setTask(response.task);
+      setWorkspaceTab("assets");
     });
   }
 
@@ -367,6 +372,7 @@ int main() {
         },
       );
       setTask(response.task);
+      setWorkspaceTab("run");
     });
   }
 
@@ -388,6 +394,7 @@ int main() {
         },
       );
       setQuickRunResult(response);
+      setWorkspaceTab("edit");
     });
   }
 
@@ -395,6 +402,7 @@ int main() {
     const failureInput = selectedProject?.last_duel_result?.failure?.input ?? "";
     setQuickInput(failureInput);
     setQuickRunResult(null);
+    setWorkspaceTab("edit");
   }
 
   async function runBusy(action: () => Promise<void>) {
@@ -419,7 +427,7 @@ int main() {
             <div>
               <h1>算法对拍工作台</h1>
               <div className="muted">
-                项目、题面、代码生成、异步任务和失败样例放在同一个工作区里。
+                现在按工作流拆成概览 / 编辑 / 生成资产 / 对拍运行四个分区，减少来回切换和误点。
               </div>
             </div>
             <div className="headerMeta">
@@ -524,185 +532,244 @@ int main() {
         </aside>
 
         <section className="content stack">
-          <section className="metricGrid">
-            <MetricCard
-              title="当前项目"
-              value={selectedProject?.name ?? "未选择"}
-              meta={selectedProject?.id ?? "请先在左侧选择项目"}
-            />
-            <MetricCard
-              title="项目状态"
-              value={selectedProject?.status ?? "draft"}
-              meta={`artifacts ${Object.keys(selectedProject?.artifacts ?? {}).length}`}
-              tone={getStatusTone(selectedProject?.status)}
-            />
-            <MetricCard
-              title="最近任务"
-              value={task?.type ?? "none"}
-              meta={task ? `${task.status} / ${task.current_stage ?? "-"}` : "等待任务"}
-              tone={getStatusTone(task?.status)}
-            />
-            <MetricCard
-              title="对拍轮数"
-              value={duelRounds}
-              meta="当前发起参数"
-            />
-            <MetricCard
-              title="生成策略"
-              value={`${provider} / ${selfTest ? "self-test" : "fast"}`}
-              meta={`repair ${clampInt(repairRounds, 1, 0, 2)}`}
-              tone={runtime?.openai.provider_available ? "success" : "warning"}
-            />
-            <MetricCard
-              title="任务后端"
-              value={runtime?.queue.active_backend ?? "unknown"}
-              meta={`requested ${runtime?.queue.requested_backend ?? "-"}`}
-              tone={getStatusTone(runtime?.queue.active_backend)}
-            />
-          </section>
+          <WorkspaceTabs active={workspaceTab} onChange={setWorkspaceTab} />
 
-          <section className="panel stack panelLarge">
-            <div className="panelHeading">
-              <div>
-                <h2>编辑区</h2>
-                <p className="muted">先保存题面和用户代码，再触发解析 / 生成 / 对拍。</p>
-              </div>
-            </div>
+          {workspaceTab === "overview" ? (
+            <>
+              <section className="metricGrid">
+                <MetricCard
+                  title="当前项目"
+                  value={selectedProject?.name ?? "未选择"}
+                  meta={selectedProject?.id ?? "请先在左侧选择项目"}
+                />
+                <MetricCard
+                  title="项目状态"
+                  value={selectedProject?.status ?? "draft"}
+                  meta={`artifacts ${Object.keys(selectedProject?.artifacts ?? {}).length}`}
+                  tone={getStatusTone(selectedProject?.status)}
+                />
+                <MetricCard
+                  title="最近任务"
+                  value={task?.type ?? "none"}
+                  meta={task ? `${task.status} / ${task.current_stage ?? "-"}` : "等待任务"}
+                  tone={getStatusTone(task?.status)}
+                />
+                <MetricCard
+                  title="生成策略"
+                  value={`${provider} / ${selfTest ? "self-test" : "fast"}`}
+                  meta={`repair ${clampInt(repairRounds, 1, 0, 2)}`}
+                  tone={runtime?.openai.provider_available ? "success" : "warning"}
+                />
+                <MetricCard
+                  title="任务后端"
+                  value={runtime?.queue.active_backend ?? "unknown"}
+                  meta={`requested ${runtime?.queue.requested_backend ?? "-"}`}
+                  tone={getStatusTone(runtime?.queue.active_backend)}
+                />
+                <MetricCard
+                  title="最近对拍"
+                  value={selectedProject?.last_duel_result?.status ?? "none"}
+                  meta={
+                    selectedProject?.last_duel_result
+                      ? `${selectedProject.last_duel_result.rounds_completed}/${selectedProject.last_duel_result.rounds_requested}`
+                      : "还没有运行"
+                  }
+                  tone={getStatusTone(selectedProject?.last_duel_result?.status)}
+                />
+              </section>
 
-            <div className="toolbar">
-              <div className="toolbarGroup">
-                <button className="button" onClick={() => void saveProblem()} disabled={busy || !selectedProjectId}>
-                  保存题面
-                </button>
-                <button className="button secondary" onClick={() => void startParse()} disabled={busy || !selectedProjectId}>
-                  异步解析
-                </button>
-              </div>
+              <section className="twoCol">
+                <TaskPanel task={task} />
+                <ProjectSummaryPanel
+                  project={selectedProject}
+                  onOpenEdit={() => setWorkspaceTab("edit")}
+                  onOpenAssets={() => setWorkspaceTab("assets")}
+                  onOpenRun={() => setWorkspaceTab("run")}
+                />
+              </section>
 
-              <div className="toolbarGroup">
-                <label className="field compactField">
-                  <span className="fieldLabel">生成器</span>
-                  <select className="select" value={provider} onChange={(event) => setProvider(event.target.value)}>
-                    <option value="auto">auto</option>
-                    <option value="template">template</option>
-                    <option value="openai">openai</option>
-                  </select>
-                </label>
-                <label className="field compactField fieldShort">
-                  <span className="fieldLabel">回修轮数</span>
-                  <input
-                    className="input"
-                    value={repairRounds}
-                    onChange={(event) => setRepairRounds(event.target.value)}
+              <section className="twoCol">
+                <section className="panel stack panelLarge">
+                  <div className="panelHeading">
+                    <div>
+                      <h2>运行环境摘要</h2>
+                      <p className="muted">保留最常用的配置状态，排查环境问题时看这里。</p>
+                    </div>
+                  </div>
+                  <RuntimePanel runtime={runtime} />
+                </section>
+
+                <section className="panel stack panelLarge">
+                  <div className="panelHeading">
+                    <div>
+                      <h2>最近对拍结果</h2>
+                      <p className="muted">概览里只保留一份结果摘要，完整操作放到“对拍运行”。</p>
+                    </div>
+                  </div>
+                  <DuelResultPanel
+                    result={selectedProject?.last_duel_result ?? null}
+                    onUseFailureInput={fillQuickInputFromFailure}
                   />
-                </label>
-                <label className="toggleField">
-                  <input
-                    type="checkbox"
-                    checked={selfTest}
-                    onChange={(event) => setSelfTest(event.target.checked)}
-                  />
-                  <span>生成后自检</span>
-                </label>
-                <button className="button secondary" onClick={() => void startGenerate()} disabled={busy || !selectedProjectId}>
-                  异步生成
-                </button>
-              </div>
+                </section>
+              </section>
+            </>
+          ) : null}
 
-              <div className="toolbarGroup">
-                <button className="button ghost" onClick={() => void saveUserSolution()} disabled={busy || !selectedProjectId}>
-                  保存用户代码
-                </button>
-                <label className="field compactField fieldShort">
-                  <span className="fieldLabel">轮数</span>
-                  <input
-                    className="input"
-                    value={duelRounds}
-                    onChange={(event) => setDuelRounds(event.target.value)}
-                  />
-                </label>
-                <button className="button ghost" onClick={() => void startDuel()} disabled={busy || !selectedProjectId}>
-                  异步对拍
-                </button>
-              </div>
-            </div>
+          {workspaceTab === "edit" ? (
+            <>
+              <section className="twoCol">
+                <section className="panel stack panelLarge">
+                  <div className="panelHeading">
+                    <div>
+                      <h2>题面编辑</h2>
+                      <p className="muted">只放题面相关按钮，保存和解析都在这里。</p>
+                    </div>
+                    <div className="editorActions">
+                      <CopyButton text={problemText} label="复制题面" />
+                      <button className="button secondary" onClick={() => void startParse()} disabled={busy || !selectedProjectId}>
+                        解析题面
+                      </button>
+                      <button className="button" onClick={() => void saveProblem()} disabled={busy || !selectedProjectId}>
+                        保存题面
+                      </button>
+                    </div>
+                  </div>
+                  <CodeEditor value={problemText} language="markdown" onChange={setProblemText} height={520} />
+                </section>
 
-            <div className="editorGrid">
-              <div className="editorCard">
-                <div className="editorHeader">
+                <section className="panel stack panelLarge">
+                  <div className="panelHeading">
+                    <div>
+                      <h2>用户代码</h2>
+                      <p className="muted">当前编辑器里的代码就是保存和快速运行的来源。</p>
+                    </div>
+                    <div className="editorActions">
+                      <CopyButton text={userCode} label="复制代码" />
+                      <button className="button" onClick={() => void saveUserSolution()} disabled={busy || !selectedProjectId}>
+                        保存用户代码
+                      </button>
+                    </div>
+                  </div>
+                  <CodeEditor value={userCode} language="cpp" onChange={setUserCode} height={520} />
+                </section>
+              </section>
+
+              <section className="panel stack panelLarge">
+                <div className="panelHeading">
                   <div>
-                    <h3>题面</h3>
-                    <div className="muted">Markdown / text / LaTeX 文本输入。</div>
+                    <h2>快速运行</h2>
+                    <p className="muted">调单组输入时留在编辑页，不用再切去找按钮。</p>
                   </div>
-                  <div className="editorActions">
-                    <CopyButton text={problemText} label="复制题面" />
-                  </div>
-                </div>
-                <CodeEditor value={problemText} language="markdown" onChange={setProblemText} height={420} />
-              </div>
-              <div className="editorCard">
-                <div className="editorHeader">
-                  <div>
-                    <h3>用户代码</h3>
-                    <div className="muted">C++ 编辑区，支持直接保存到 user_solution。</div>
-                  </div>
-                  <div className="editorActions">
-                    <CopyButton text={userCode} label="复制代码" />
-                  </div>
-                </div>
-                <CodeEditor value={userCode} language="cpp" onChange={setUserCode} height={420} />
-              </div>
-            </div>
-          </section>
-
-          <section className="twoCol">
-            <section className="panel stack panelLarge">
-              <div className="panelHeading">
-                <div>
-                  <h2>当前任务</h2>
-                  <p className="muted">异步任务状态、阶段和日志。</p>
-                </div>
-                {task ? (
-                  <StatusBadge
-                    label={`${task.status} · ${task.progress}%`}
-                    tone={getStatusTone(task.status)}
-                  />
-                ) : null}
-              </div>
-              {task ? (
-                <>
                   <div className="metaRow">
-                    <StatusBadge label={task.type} tone="neutral" />
-                    <StatusBadge label={task.current_stage ?? "-"} tone="neutral" />
-                    <StatusBadge label={`progress ${task.progress}%`} tone="running" />
+                    <label className="field compactField fieldShort">
+                      <span className="fieldLabel">时限 ms</span>
+                      <input
+                        className="input"
+                        value={quickRunTimeLimitMs}
+                        onChange={(event) => setQuickRunTimeLimitMs(event.target.value)}
+                      />
+                    </label>
+                    <button
+                      className="button ghost"
+                      onClick={fillQuickInputFromFailure}
+                      disabled={busy || !selectedProject?.last_duel_result?.failure?.input}
+                    >
+                      回填反例输入
+                    </button>
+                    <button
+                      className="button secondary"
+                      onClick={() => void runQuickUserCode()}
+                      disabled={busy || !selectedProjectId}
+                    >
+                      运行当前代码
+                    </button>
                   </div>
-                  {task.error ? <div className="banner bannerError">{task.error}</div> : null}
-                  <TaskLogsPanel logs={task.logs} />
-                </>
-              ) : (
-                <div className="emptyState">还没有任务。先保存题面，然后点“异步解析”或“异步生成”。</div>
-              )}
-            </section>
+                </div>
+                <QuickRunPanel
+                  input={quickInput}
+                  onInputChange={setQuickInput}
+                  result={quickRunResult}
+                />
+              </section>
+            </>
+          ) : null}
 
-            <section className="panel stack panelLarge">
-              <div className="panelHeading">
-                <div>
-                  <h2>ProblemSpec 编辑</h2>
-                  <p className="muted">直接编辑结构化题面，然后保存回后端。</p>
+          {workspaceTab === "assets" ? (
+            <>
+              <section className="twoCol">
+                <section className="panel stack panelLarge">
+                  <div className="panelHeading">
+                    <div>
+                      <h2>生成控制</h2>
+                      <p className="muted">生成参数和按钮集中在这里，避免和编辑、对拍动作混在一起。</p>
+                    </div>
+                    <button
+                      className="button"
+                      onClick={() => void startGenerate()}
+                      disabled={busy || !selectedProjectId}
+                    >
+                      开始生成
+                    </button>
+                  </div>
+                  <div className="formGrid">
+                    <label className="field">
+                      <span className="fieldLabel">生成器</span>
+                      <select className="select" value={provider} onChange={(event) => setProvider(event.target.value)}>
+                        <option value="auto">auto</option>
+                        <option value="template">template</option>
+                        <option value="openai">openai</option>
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span className="fieldLabel">回修轮数</span>
+                      <input
+                        className="input"
+                        value={repairRounds}
+                        onChange={(event) => setRepairRounds(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="toggleField">
+                    <input
+                      type="checkbox"
+                      checked={selfTest}
+                      onChange={(event) => setSelfTest(event.target.checked)}
+                    />
+                    <span>生成后自检</span>
+                  </label>
+                  <div className="muted">
+                    当前产物数：{Object.keys(selectedProject?.artifacts ?? {}).length}；OpenAI：
+                    {runtime?.openai.provider_available ? "已就绪" : "未就绪"}
+                  </div>
+                </section>
+                <TaskPanel task={task} />
+              </section>
+
+              <section className="panel stack panelLarge">
+                <div className="panelHeading">
+                  <div>
+                    <h2>生成产物</h2>
+                    <p className="muted">只在这个工作区预览产物，减少整页来回滚动。</p>
+                  </div>
+                </div>
+                <ArtifactTabs
+                  project={selectedProject}
+                  activeArtifact={activeArtifact}
+                  onChange={setActiveArtifact}
+                />
+              </section>
+
+              <section className="panel stack panelLarge">
+                <div className="panelHeading">
+                  <div>
+                    <h2>ProblemSpec 编辑</h2>
+                    <p className="muted">结构化题面和生成资产是同一个阶段，所以放在一起。</p>
+                  </div>
+                  {selectedProject ? (
+                    <StatusBadge label={selectedProject.status} tone={getStatusTone(selectedProject.status)} />
+                  ) : null}
                 </div>
                 {selectedProject ? (
-                  <StatusBadge label={selectedProject.status} tone={getStatusTone(selectedProject.status)} />
-                ) : null}
-              </div>
-              {selectedProject ? (
-                <>
-                  <div className="metaRow">
-                    <StatusBadge label={selectedProject.id} tone="neutral" />
-                    <StatusBadge
-                      label={`${Object.keys(selectedProject.artifacts ?? {}).length} artifacts`}
-                      tone="neutral"
-                    />
-                  </div>
                   <ProblemSpecEditor
                     value={specDraft}
                     busy={busy}
@@ -711,79 +778,81 @@ int main() {
                     onSave={() => void saveProblemSpec()}
                     onReset={() => setSpecDraft(cloneProblemSpec(selectedProject.problem_spec))}
                   />
-                </>
-              ) : (
-                <div className="emptyState">请选择项目。</div>
-              )}
-            </section>
-          </section>
+                ) : (
+                  <div className="emptyState">请选择项目。</div>
+                )}
+              </section>
+            </>
+          ) : null}
 
-          <section className="panel stack panelLarge">
-            <div className="panelHeading">
-              <div>
-                <h2>快速运行</h2>
-                <p className="muted">用当前编辑器里的 user_solution 跑单组输入，不用先发起完整对拍。</p>
-              </div>
-              <div className="metaRow">
-                <label className="field compactField fieldShort">
-                  <span className="fieldLabel">时限 ms</span>
-                  <input
-                    className="input"
-                    value={quickRunTimeLimitMs}
-                    onChange={(event) => setQuickRunTimeLimitMs(event.target.value)}
-                  />
-                </label>
-                <button
-                  className="button ghost"
-                  onClick={fillQuickInputFromFailure}
-                  disabled={busy || !selectedProject?.last_duel_result?.failure?.input}
-                >
-                  回填反例输入
-                </button>
-                <button
-                  className="button secondary"
-                  onClick={() => void runQuickUserCode()}
-                  disabled={busy || !selectedProjectId}
-                >
-                  运行当前代码
-                </button>
-              </div>
-            </div>
-            <QuickRunPanel
-              input={quickInput}
-              onInputChange={setQuickInput}
-              result={quickRunResult}
-            />
-          </section>
+          {workspaceTab === "run" ? (
+            <>
+              <section className="twoCol">
+                <section className="panel stack panelLarge">
+                  <div className="panelHeading">
+                    <div>
+                      <h2>对拍控制</h2>
+                      <p className="muted">对拍参数和启动按钮放到独立区域，不再和生成按钮混在一起。</p>
+                    </div>
+                    <button
+                      className="button"
+                      onClick={() => void startDuel()}
+                      disabled={busy || !selectedProjectId}
+                    >
+                      开始对拍
+                    </button>
+                  </div>
+                  <div className="formGrid">
+                    <label className="field">
+                      <span className="fieldLabel">轮数</span>
+                      <input
+                        className="input"
+                        value={duelRounds}
+                        onChange={(event) => setDuelRounds(event.target.value)}
+                      />
+                    </label>
+                    <div className="infoItem">
+                      <div className="infoLabel">失败输入</div>
+                      <div className="infoValue">
+                        {selectedProject?.last_duel_result?.failure?.input ? "可回填到快测" : "暂无"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="editorActions">
+                    <button
+                      className="button secondary"
+                      onClick={fillQuickInputFromFailure}
+                      disabled={busy || !selectedProject?.last_duel_result?.failure?.input}
+                    >
+                      失败输入回填到快测
+                    </button>
+                    <button
+                      className="button ghost"
+                      onClick={() => setWorkspaceTab("edit")}
+                      disabled={!selectedProjectId}
+                    >
+                      去编辑 / 快测
+                    </button>
+                  </div>
+                </section>
 
-          <section className="twoCol">
-            <section className="panel stack panelLarge">
-              <div className="panelHeading">
-                <div>
-                  <h2>生成产物</h2>
-                  <p className="muted">切换不同产物查看当前代码。</p>
+                <TaskPanel task={task} />
+              </section>
+
+              <section className="panel stack panelLarge">
+                <div className="panelHeading">
+                  <div>
+                    <h2>对拍结果</h2>
+                    <p className="muted">对拍相关信息只留在这个工作区，避免概览和编辑页信息过载。</p>
+                  </div>
                 </div>
-              </div>
-              <ArtifactTabs
-                project={selectedProject}
-                activeArtifact={activeArtifact}
-                onChange={setActiveArtifact}
-              />
-            </section>
-
-            <section className="panel stack panelLarge">
-              <div className="panelHeading">
-                <div>
-                  <h2>对拍结果</h2>
-                  <p className="muted">首个失败样例、输出差异和编译日志。</p>
-                </div>
-              </div>
-              <DuelResultPanel
-                result={selectedProject?.last_duel_result ?? null}
-                onUseFailureInput={fillQuickInputFromFailure}
-              />
-            </section>
-          </section>
+                <DuelResultPanel
+                  result={selectedProject?.last_duel_result ?? null}
+                  onUseFailureInput={fillQuickInputFromFailure}
+                />
+              </section>
+            </>
+          ) : null}
         </section>
       </section>
     </main>
@@ -838,6 +907,131 @@ function RuntimePanel({ runtime }: { runtime: RuntimeInfo | null }) {
 
       {queueFallback ? <div className="banner bannerWarn">{queueFallback}</div> : null}
     </div>
+  );
+}
+
+function WorkspaceTabs({
+  active,
+  onChange,
+}: {
+  active: WorkspaceTab;
+  onChange: (tab: WorkspaceTab) => void;
+}) {
+  const tabs: Array<{ id: WorkspaceTab; label: string; hint: string }> = [
+    { id: "overview", label: "概览", hint: "状态 / 最近结果" },
+    { id: "edit", label: "编辑", hint: "题面 / 代码 / 快测" },
+    { id: "assets", label: "生成资产", hint: "生成 / Spec / 产物" },
+    { id: "run", label: "对拍运行", hint: "对拍 / 日志 / 结果" },
+  ];
+
+  return (
+    <section className="panel workspaceTabs">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          className={`workspaceTab ${active === tab.id ? "active" : ""}`}
+          onClick={() => onChange(tab.id)}
+        >
+          <span className="workspaceTabLabel">{tab.label}</span>
+          <span className="workspaceTabHint">{tab.hint}</span>
+        </button>
+      ))}
+    </section>
+  );
+}
+
+function TaskPanel({ task }: { task: TaskRecord | null }) {
+  return (
+    <section className="panel stack panelLarge">
+      <div className="panelHeading">
+        <div>
+          <h2>当前任务</h2>
+          <p className="muted">异步任务状态、阶段和日志。</p>
+        </div>
+        {task ? (
+          <StatusBadge label={`${task.status} · ${task.progress}%`} tone={getStatusTone(task.status)} />
+        ) : null}
+      </div>
+      {task ? (
+        <>
+          <div className="metaRow">
+            <StatusBadge label={task.type} tone="neutral" />
+            <StatusBadge label={task.current_stage ?? "-"} tone="neutral" />
+            <StatusBadge label={`progress ${task.progress}%`} tone="running" />
+          </div>
+          {task.error ? <div className="banner bannerError">{task.error}</div> : null}
+          <TaskLogsPanel logs={task.logs} />
+        </>
+      ) : (
+        <div className="emptyState">还没有任务。解析 / 生成 / 对拍后，这里会显示进度和日志。</div>
+      )}
+    </section>
+  );
+}
+
+function ProjectSummaryPanel({
+  project,
+  onOpenEdit,
+  onOpenAssets,
+  onOpenRun,
+}: {
+  project: ProjectRecord | null;
+  onOpenEdit: () => void;
+  onOpenAssets: () => void;
+  onOpenRun: () => void;
+}) {
+  if (!project) {
+    return (
+      <section className="panel stack panelLarge">
+        <div className="panelHeading">
+          <div>
+            <h2>项目概览</h2>
+            <p className="muted">先从左侧选择项目。</p>
+          </div>
+        </div>
+        <div className="emptyState">当前没有选中的项目。</div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="panel stack panelLarge">
+      <div className="panelHeading">
+        <div>
+          <h2>项目概览</h2>
+          <p className="muted">把最常看的项目信息集中到一张卡里。</p>
+        </div>
+        <StatusBadge label={project.status} tone={getStatusTone(project.status)} />
+      </div>
+
+      <div className="cardGrid">
+        <InfoItem label="project" value={project.name} />
+        <InfoItem label="artifacts" value={String(Object.keys(project.artifacts ?? {}).length)} />
+        <InfoItem label="samples" value={String(project.problem_spec?.samples?.length ?? 0)} />
+        <InfoItem label="updated" value={formatTime(project.updated_at)} />
+      </div>
+
+      <div className="subtleCard stack">
+        <div className="infoLabel">ProblemSpec</div>
+        <div className="infoValue">{project.problem_spec?.title ?? "尚未解析"}</div>
+        <div className="muted">
+          题型：{project.problem_spec?.problem_type_guess?.slice(0, 3).join(" / ") || "未识别"}
+        </div>
+      </div>
+
+      <div className="editorActions">
+        <button type="button" className="button secondary" onClick={onOpenEdit}>
+          去编辑
+        </button>
+        <button type="button" className="button secondary" onClick={onOpenAssets}>
+          去生成资产
+        </button>
+        <button type="button" className="button secondary" onClick={onOpenRun}>
+          去对拍运行
+        </button>
+      </div>
+    </section>
   );
 }
 

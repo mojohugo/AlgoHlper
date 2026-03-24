@@ -245,6 +245,51 @@ button {
   min-height: 420px;
 }
 
+.workspaceTabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  position: sticky;
+  top: 20px;
+  z-index: 6;
+}
+
+.workspaceTab {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(2, 6, 23, 0.46);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.workspaceTab:hover {
+  transform: translateY(-1px);
+  border-color: rgba(59, 130, 246, 0.38);
+}
+
+.workspaceTab.active {
+  border-color: rgba(59, 130, 246, 0.72);
+  background: rgba(37, 99, 235, 0.16);
+}
+
+.workspaceTabLabel {
+  font-weight: 700;
+}
+
+.workspaceTabHint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .buttonRow,
 .toolbar,
 .toolbarGroup,
@@ -757,6 +802,7 @@ button {
 }
 
 @media (max-width: 1280px) {
+  .workspaceTabs,
   .metricGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -795,7 +841,8 @@ button {
   .metricGrid,
   .cardGrid,
   .runtimeGrid,
-  .kvRow {
+  .kvRow,
+  .workspaceTabs {
     grid-template-columns: 1fr;
   }
 }

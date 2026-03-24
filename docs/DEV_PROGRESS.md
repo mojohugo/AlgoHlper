@@ -121,6 +121,8 @@
   - 一键复制（题面 / 代码 / 产物 / 反例输入 / expected / actual / 编译日志）
   - ProblemSpec 表单化编辑（标题 / 描述 / IO / 约束 / 样例 / 备注）
   - 快速运行面板（当前 user_solution + 任意输入 + 反例回填）
+  - 工作台拆分为四个分区（概览 / 编辑 / 生成资产 / 对拍运行），减少单页堆叠
+  - 解析 / 生成 / 对拍后自动切换到对应分区，任务日志不再需要手动来回找
 - 已新增 `scripts/start_web.ps1`，用于本地 Windows 启动前端。
 - 已做第一轮视觉重构：
   - hero 头部
@@ -176,31 +178,31 @@
 - 写了异步 API 测试，覆盖任务提交和轮询完成。
 - 写了队列 backend 测试，覆盖 Celery 不可用时自动回退到 in-process。
 - 写了 Redis URL 组装测试，覆盖 Windows 本地 Redis 密码场景。
-- 跑通了前端 `npm run build`，确认 Next.js 最小工作台可以构建。
+- 跑通了前端 `npm run build`，确认 Next.js 分区式工作台可以构建。
 
 ## 当前明确未完成
 
-- Celery/Redis 目前还是“可切换骨架”，还没补 docker-compose、真正 Redis 联调、任务重试策略和 worker 运行文档细节。
-- 前端目前还是单页最小工作台，尚未拆组件状态层、Monaco 编辑器、Diff Viewer、SSE 日志流。
+- Celery/Redis 目前还是“可切换骨架”，还没补完整的任务重试策略、生产级部署方案和更细的 worker 运行文档。
+- 前端已拆成四个工作分区，但 `apps/web/components/workbench.tsx` 仍然偏大，后续还应继续拆独立组件或页面级路由。
 - `openai provider` 已有基础自检和单轮自动回修，但还没有做更严格的 schema 约束、样例不足时的补测策略、以及多轮稳定性治理。
-- 没有 PostgreSQL / Redis / Celery。
-- 没有 Docker / gVisor Runner。
-- 没有前端页面。
-- 没有反例最小化。
-- 没有用户系统和多租户。
+- 还没有独立 Runner / 容器隔离执行层。
+- 还没有反例最小化。
+- 还没有用户系统和多租户。
 
 ## 建议下一个模型接手时先读
 
 1. `algorithm_duipai_agent_dev_doc.md`
 2. `README.md`
 3. `docs/DEV_PROGRESS.md`
-4. `src/algohlper/api/app.py`
-5. `src/algohlper/services/duel.py`
-6. `src/algohlper/services/problem_parser.py`
+4. `apps/web/components/workbench.tsx`
+5. `apps/web/components/problem-spec-editor.tsx`
+6. `src/algohlper/api/app.py`
+7. `src/algohlper/services/duel.py`
+8. `src/algohlper/services/problem_parser.py`
 
 ## 下一步推荐顺序
 
-1. 先强化 `openai provider`：结构化输出校验、编译失败自动修复、样例自测。
-2. 再把 `POST /parse` 和 `POST /duel` 改成异步任务。
+1. 先强化 `openai provider`：结构化输出校验、编译失败自动修复、样例补测和多轮稳定性。
+2. 再补齐 Redis + Celery 的本地 / 生产运行文档和任务重试策略。
 3. 再拆独立 runner，接容器隔离。
-4. 最后补前端工作台。
+4. 如果继续做前端，优先把工作台拆成更细组件或独立页面，而不是继续往一个文件里堆功能。
