@@ -92,6 +92,20 @@
   - `scripts/start_worker.ps1`
 - Windows 下 worker 默认建议走 `solo` pool，适合作为本地开发模式。
 
+### 7. 前端最小工作台
+- 已新增 `apps/web`，采用 Next.js App Router 最小骨架。
+- 当前已接通这些流程：
+  - 项目列表与新建项目
+  - 保存题面
+  - 异步解析
+  - 异步生成
+  - 保存用户代码
+  - 异步对拍
+  - 任务轮询与日志展示
+  - 产物代码预览
+  - 对拍结果 JSON 展示
+- 已新增 `scripts/start_web.ps1`，用于本地 Windows 启动前端。
+
 ### 5. 本地对拍内核
 - 实现了 C++ 编译与执行封装，基于本机 `g++`。
 - 实现了标准对拍循环：`gen -> brute -> user -> compare`。
@@ -133,10 +147,12 @@
 - 写了异步 API 测试，覆盖任务提交和轮询完成。
 - 写了队列 backend 测试，覆盖 Celery 不可用时自动回退到 in-process。
 - 写了 Redis URL 组装测试，覆盖 Windows 本地 Redis 密码场景。
+- 跑通了前端 `npm run build`，确认 Next.js 最小工作台可以构建。
 
 ## 当前明确未完成
 
 - Celery/Redis 目前还是“可切换骨架”，还没补 docker-compose、真正 Redis 联调、任务重试策略和 worker 运行文档细节。
+- 前端目前还是单页最小工作台，尚未拆组件状态层、Monaco 编辑器、Diff Viewer、SSE 日志流。
 - `openai provider` 已有基础自检和单轮自动回修，但还没有做更严格的 schema 约束、样例不足时的补测策略、以及多轮稳定性治理。
 - 没有 PostgreSQL / Redis / Celery。
 - 没有 Docker / gVisor Runner。

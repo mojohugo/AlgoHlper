@@ -25,6 +25,7 @@ class Settings:
     redis_broker_db: int = 0
     redis_result_db: int = 1
     celery_worker_pool: str = "solo"
+    cors_origins: tuple[str, ...] = ("http://127.0.0.1:3000", "http://localhost:3000")
     codegen_provider: str = "template"
     openai_api_key: str | None = None
     openai_model: str = "gpt-5.4"
@@ -67,6 +68,14 @@ class Settings:
         )
         default_pool = "solo" if sys.platform.startswith("win") else "prefork"
         celery_worker_pool = os.getenv("ALGOHLPER_CELERY_WORKER_POOL", default_pool)
+        cors_origins = tuple(
+            origin.strip()
+            for origin in os.getenv(
+                "ALGOHLPER_CORS_ORIGINS",
+                "http://127.0.0.1:3000,http://localhost:3000",
+            ).split(",")
+            if origin.strip()
+        )
         codegen_provider = os.getenv("ALGOHLPER_CODEGEN_PROVIDER", "template")
         openai_api_key = (
             os.getenv("OPENAI_API_KEY")
@@ -108,6 +117,7 @@ class Settings:
             redis_broker_db=redis_broker_db,
             redis_result_db=redis_result_db,
             celery_worker_pool=celery_worker_pool,
+            cors_origins=cors_origins,
             codegen_provider=codegen_provider,
             openai_api_key=openai_api_key,
             openai_model=openai_model,

@@ -9,3 +9,5 @@ dist/
 *.pyc
 *.egg-info/
 .algohlper_data/
+apps/web/node_modules/
+apps/web/.next/

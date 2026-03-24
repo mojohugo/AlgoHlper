@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from algohlper.config import Settings
 from algohlper.models import (
@@ -57,6 +58,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.tasks = tasks
     app.state.context = context
     app.state.queue = queue
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(resolved_settings.cors_origins),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

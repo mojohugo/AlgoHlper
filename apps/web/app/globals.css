@@ -1,0 +1,192 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  background: #0b1020;
+  color: #e5e7eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0b1020;
+}
+
+body {
+  padding: 24px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.muted {
+  color: #94a3b8;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.panel {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.panel h2,
+.panel h3 {
+  margin-top: 0;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #020617;
+  color: #e5e7eb;
+  padding: 10px 12px;
+}
+
+.textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: #334155;
+}
+
+.button.ghost {
+  background: transparent;
+  border: 1px solid #334155;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.projectList {
+  display: grid;
+  gap: 10px;
+}
+
+.projectItem {
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 12px;
+  background: #020617;
+  cursor: pointer;
+}
+
+.projectItem.active {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.code,
+.pre {
+  font-family: Consolas, "Courier New", monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.error {
+  color: #fca5a5;
+}
+
+.success {
+  color: #86efac;
+}
+
+@media (max-width: 1100px) {
+  .layout,
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}
