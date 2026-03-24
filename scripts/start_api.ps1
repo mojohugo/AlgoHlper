@@ -2,7 +2,7 @@ param(
     [string]$RedisHost = "127.0.0.1",
     [int]$RedisPort = 6379,
     [string]$RedisPassword = "",
-    [string]$Host = "127.0.0.1",
+    [string]$BindHost = "127.0.0.1",
     [int]$Port = 8000
 )
 
@@ -20,7 +20,7 @@ $pythonCmd = if (Test-Path $venvPython) { $venvPython } else { "python" }
 Write-Host "Starting API with Redis $RedisHost`:$RedisPort ..."
 Push-Location $repoRoot
 try {
-    & $pythonCmd -m uvicorn algohlper.api.app:app --app-dir src --host $Host --port $Port --reload
+    & $pythonCmd -m uvicorn algohlper.api.app:app --app-dir src --host $BindHost --port $Port --reload
 }
 finally {
     Pop-Location
