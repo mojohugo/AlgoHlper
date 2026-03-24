@@ -91,7 +91,7 @@ export function ProblemSpecEditor({
   return (
     <div className="stack">
       <div className="metaRow">
-        <CopyButton text={JSON.stringify(value, null, 2)} label="复制 Spec JSON" />
+        <CopyButton text={JSON.stringify(value, null, 2)} label="复制结构化 JSON" />
         <button
           type="button"
           className="button secondary buttonSmall"
@@ -106,7 +106,7 @@ export function ProblemSpecEditor({
           onClick={onSave}
           disabled={busy || disabled}
         >
-          保存 Spec
+          保存结构化题面
         </button>
       </div>
 
@@ -307,7 +307,7 @@ export function ProblemSpecEditor({
 
       <section className="stack">
         <div className="sectionHeader">
-          <h3>Spec JSON 预览</h3>
+          <h3>结构化 JSON 预览</h3>
           <CopyButton text={JSON.stringify(value, null, 2)} label="复制 JSON" />
         </div>
         <CodeEditor

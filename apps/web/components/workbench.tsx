@@ -143,7 +143,7 @@ export function Workbench() {
   const [task, setTask] = useState<TaskRecord | null>(null);
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("edit");
   const [activeArtifact, setActiveArtifact] = useState("brute");
-  const [projectName, setProjectName] = useState("Demo Project");
+  const [projectName, setProjectName] = useState("示例项目");
   const [specDraft, setSpecDraft] = useState<ProblemSpec>(emptyProblemSpec());
   const [problemText, setProblemText] = useState(`# A + B Problem
 
@@ -422,7 +422,7 @@ int main() {
       <section className="hero panel">
         <div className="heroGlow" />
         <div className="heroContent">
-          <div className="eyebrow">AlgoHlper / Workbench</div>
+          <div className="eyebrow">AlgoHlper / 算法对拍</div>
           <div className="header">
             <div>
               <h1>算法对拍工作台</h1>
@@ -506,7 +506,7 @@ int main() {
                     <StatusBadge label={humanizeStatus(project.status)} tone={getStatusTone(project.status)} />
                   </div>
                   <div className="muted mono">{project.id}</div>
-                  <div className="projectMeta">updated {formatTime(project.updated_at)}</div>
+                  <div className="projectMeta">更新于 {formatTime(project.updated_at)}</div>
                 </button>
               ))}
               {projects.length === 0 ? <div className="emptyState">还没有项目，先在上面建一个。</div> : null}
@@ -545,7 +545,7 @@ int main() {
                 <MetricCard
                   title="项目状态"
                   value={humanizeStatus(selectedProject?.status ?? "draft")}
-                  meta={`artifacts ${Object.keys(selectedProject?.artifacts ?? {}).length}`}
+                  meta={`产物 ${Object.keys(selectedProject?.artifacts ?? {}).length} 份`}
                   tone={getStatusTone(selectedProject?.status)}
                 />
                 <MetricCard
@@ -560,14 +560,14 @@ int main() {
                 />
                 <MetricCard
                   title="生成策略"
-                  value={`${provider} / ${selfTest ? "self-test" : "fast"}`}
-                  meta={`repair ${clampInt(repairRounds, 1, 0, 2)}`}
+                  value={`${humanizeProvider(provider)} / ${selfTest ? "带自检" : "快速模式"}`}
+                  meta={`回修 ${clampInt(repairRounds, 1, 0, 2)} 轮`}
                   tone={runtime?.openai.provider_available ? "success" : "warning"}
                 />
                 <MetricCard
                   title="任务后端"
                   value={humanizeStatus(runtime?.queue.active_backend ?? "unknown")}
-                  meta={`requested ${runtime?.queue.requested_backend ?? "-"}`}
+                  meta={`请求：${humanizeStatus(runtime?.queue.requested_backend ?? "-")}`}
                   tone={getStatusTone(runtime?.queue.active_backend)}
                 />
                 <MetricCard
@@ -666,7 +666,7 @@ int main() {
                   </div>
                   <div className="metaRow">
                     <label className="field compactField fieldShort">
-                      <span className="fieldLabel">时限 ms</span>
+                      <span className="fieldLabel">时限（毫秒）</span>
                       <input
                         className="input"
                         value={quickRunTimeLimitMs}
@@ -719,9 +719,9 @@ int main() {
                     <label className="field">
                       <span className="fieldLabel">生成器</span>
                       <select className="select" value={provider} onChange={(event) => setProvider(event.target.value)}>
-                        <option value="auto">auto</option>
-                        <option value="template">template</option>
-                        <option value="openai">openai</option>
+                        <option value="auto">自动</option>
+                        <option value="template">模板</option>
+                        <option value="openai">OpenAI</option>
                       </select>
                     </label>
                     <label className="field">
@@ -766,8 +766,8 @@ int main() {
               <section className="panel stack panelLarge">
                 <div className="panelHeading">
                   <div>
-                    <h2>ProblemSpec 编辑</h2>
-                    <p className="muted">结构化题面和生成资产是同一个阶段，所以放在一起。</p>
+                    <h2>结构化题面编辑</h2>
+                    <p className="muted">结构化题面和生成资产属于同一个阶段，所以放在一起。</p>
                   </div>
                   {selectedProject ? (
                     <StatusBadge label={humanizeStatus(selectedProject.status)} tone={getStatusTone(selectedProject.status)} />
@@ -876,10 +876,10 @@ function RuntimePanel({ runtime }: { runtime: RuntimeInfo | null }) {
   return (
     <div className="stack">
       <div className="runtimeGrid">
-        <InfoItem label="OpenAI" value={runtime.openai.provider_available ? "ready" : "not ready"} />
-        <InfoItem label="Model" value={runtime.openai.model || "-"} />
-        <InfoItem label="Queue" value={humanizeStatus(runtime.queue.active_backend)} />
-        <InfoItem label="C++" value={runtime.toolchain.cxx} />
+        <InfoItem label="OpenAI" value={runtime.openai.provider_available ? "已就绪" : "未就绪"} />
+        <InfoItem label="模型" value={runtime.openai.model || "-"} />
+        <InfoItem label="队列后端" value={humanizeStatus(runtime.queue.active_backend)} />
+        <InfoItem label="C++ 编译器" value={runtime.toolchain.cxx} />
       </div>
 
       <div className="stack subtleCard">
@@ -893,23 +893,23 @@ function RuntimePanel({ runtime }: { runtime: RuntimeInfo | null }) {
             tone={runtime.openai.sdk_installed ? "success" : "warning"}
           />
         </div>
-        <div className="muted">base_url：{runtime.openai.base_url ?? "官方默认"}</div>
-        <div className="muted">reasoning：{runtime.openai.reasoning_effort ?? "-"}</div>
+        <div className="muted">接口地址：{runtime.openai.base_url ?? "官方默认"}</div>
+        <div className="muted">推理强度：{runtime.openai.reasoning_effort ?? "-"}</div>
       </div>
 
       <div className="stack subtleCard">
         <div className="metaRow">
           <StatusBadge
-            label={`queue ${humanizeStatus(runtime.queue.active_backend)}`}
+            label={`队列 ${humanizeStatus(runtime.queue.active_backend)}`}
             tone={getStatusTone(runtime.queue.active_backend)}
           />
-          <StatusBadge label={`pool ${runtime.queue.worker_pool}`} tone="neutral" />
+          <StatusBadge label={`工作池 ${runtime.queue.worker_pool}`} tone="neutral" />
         </div>
         <div className="muted">
           Redis：{runtime.redis.host}:{runtime.redis.port}
           {runtime.redis.password_configured ? " / 已配置密码" : " / 未配置密码"}
         </div>
-        <div className="muted">默认 provider：{runtime.toolchain.codegen_provider}</div>
+        <div className="muted">默认生成器：{humanizeProvider(runtime.toolchain.codegen_provider)}</div>
       </div>
 
       {queueFallback ? <div className="banner bannerWarn">{queueFallback}</div> : null}
@@ -927,7 +927,7 @@ function WorkspaceTabs({
   const tabs: Array<{ id: WorkspaceTab; label: string; hint: string }> = [
     { id: "overview", label: "概览", hint: "状态 / 最近结果" },
     { id: "edit", label: "编辑", hint: "题面 / 代码 / 快测" },
-    { id: "assets", label: "生成资产", hint: "生成 / Spec / 产物" },
+    { id: "assets", label: "生成资产", hint: "生成 / 结构化题面 / 产物" },
     { id: "run", label: "对拍运行", hint: "对拍 / 日志 / 结果" },
   ];
 
@@ -965,7 +965,7 @@ function TaskPanel({ task }: { task: TaskRecord | null }) {
           <div className="metaRow">
             <StatusBadge label={humanizeTaskType(task.type)} tone="neutral" />
             <StatusBadge label={humanizeTaskStage(task.current_stage)} tone="neutral" />
-            <StatusBadge label={`progress ${task.progress}%`} tone="running" />
+            <StatusBadge label={`进度 ${task.progress}%`} tone="running" />
           </div>
           {task.error ? <div className="banner bannerError">{task.error}</div> : null}
           <TaskLogsPanel logs={task.logs} />
@@ -1013,14 +1013,14 @@ function ProjectSummaryPanel({
       </div>
 
       <div className="cardGrid">
-        <InfoItem label="project" value={project.name} />
-        <InfoItem label="artifacts" value={String(Object.keys(project.artifacts ?? {}).length)} />
-        <InfoItem label="samples" value={String(project.problem_spec?.samples?.length ?? 0)} />
-        <InfoItem label="updated" value={formatTime(project.updated_at)} />
+        <InfoItem label="项目" value={project.name} />
+        <InfoItem label="产物数" value={String(Object.keys(project.artifacts ?? {}).length)} />
+        <InfoItem label="样例数" value={String(project.problem_spec?.samples?.length ?? 0)} />
+        <InfoItem label="更新时间" value={formatTime(project.updated_at)} />
       </div>
 
       <div className="subtleCard stack">
-        <div className="infoLabel">ProblemSpec</div>
+        <div className="infoLabel">结构化题面</div>
         <div className="infoValue">{project.problem_spec?.title ?? "尚未解析"}</div>
         <div className="muted">
           题型：{project.problem_spec?.problem_type_guess?.slice(0, 3).join(" / ") || "未识别"}
@@ -1084,16 +1084,16 @@ function ArtifactTabs({
             className={`tabButton ${artifactName === activeArtifact ? "active" : ""}`}
             onClick={() => onChange(artifactName)}
           >
-            <span>{artifactName}</span>
-            <span className="muted">({value.language})</span>
+            <span>{humanizeArtifactName(artifactName)}</span>
+            <span className="muted">（{humanizeLanguage(value.language)}）</span>
           </button>
         ))}
       </div>
       {artifact ? (
         <div className="stack">
           <div className="metaRow">
-            <StatusBadge label={artifact.type} tone="neutral" />
-            <StatusBadge label={artifact.language} tone="neutral" />
+            <StatusBadge label={humanizeArtifactName(artifact.type)} tone="neutral" />
+            <StatusBadge label={humanizeLanguage(artifact.language)} tone="neutral" />
             <CopyButton text={artifact.code} label="复制产物" />
           </div>
           <CodeEditor
@@ -1140,20 +1140,20 @@ function QuickRunPanel({
               tone={result.compile_ok ? "success" : "error"}
             />
             <StatusBadge
-              label={result.timed_out ? "运行超时" : `exit ${result.exit_code ?? "-"}`}
+              label={result.timed_out ? "运行超时" : `退出码 ${result.exit_code ?? "-"}`}
               tone={result.timed_out ? "warning" : result.compile_ok ? "neutral" : "error"}
             />
-            <StatusBadge label={`${result.time_ms} ms`} tone="neutral" />
+            <StatusBadge label={`${result.time_ms} 毫秒`} tone="neutral" />
           </div>
 
           <div className="quickRunGrid">
             <section className="stack">
               <div className="sectionHeader">
-                <h3>stdout</h3>
-                <CopyButton text={result.stdout} label="复制 stdout" />
+                <h3>标准输出</h3>
+                <CopyButton text={result.stdout} label="复制标准输出" />
               </div>
               <CodeEditor
-                value={result.stdout || "(empty)"}
+                value={result.stdout || "(空)"}
                 language="plaintext"
                 readOnly
                 height={180}
@@ -1161,11 +1161,11 @@ function QuickRunPanel({
             </section>
             <section className="stack">
               <div className="sectionHeader">
-                <h3>stderr</h3>
-                <CopyButton text={result.stderr} label="复制 stderr" />
+                <h3>标准错误</h3>
+                <CopyButton text={result.stderr} label="复制标准错误" />
               </div>
               <CodeEditor
-                value={result.stderr || "(empty)"}
+                value={result.stderr || "(空)"}
                 language="plaintext"
                 readOnly
                 height={180}
@@ -1179,7 +1179,7 @@ function QuickRunPanel({
               <CopyButton text={result.compile_log} label="复制编译日志" />
             </div>
             <CodeEditor
-              value={result.compile_log || "(empty)"}
+              value={result.compile_log || "(空)"}
               language="plaintext"
               readOnly
               height={160}
@@ -1210,7 +1210,7 @@ function DuelResultPanel({
     <div className="stack">
       <div className="metaRow">
         <StatusBadge label={humanizeStatus(result.status)} tone={getStatusTone(result.status)} />
-        <StatusBadge label={`rounds ${result.rounds_completed}/${result.rounds_requested}`} tone="neutral" />
+        <StatusBadge label={`轮次 ${result.rounds_completed}/${result.rounds_requested}`} tone="neutral" />
       </div>
       <div>{result.summary}</div>
       {result.warnings.length > 0 ? (
@@ -1230,16 +1230,16 @@ function DuelResultPanel({
               <StatusBadge label={humanizeReason(failure.reason)} tone="error" />
             </div>
             <div className="cardGrid">
-              <InfoItem label="round" value={String(failure.round)} />
-              <InfoItem label="seed" value={String(failure.seed)} />
-              <InfoItem label="mode" value={failure.mode} />
-              <InfoItem label="size" value={String(failure.size)} />
+              <InfoItem label="轮次" value={String(failure.round)} />
+              <InfoItem label="种子" value={String(failure.seed)} />
+              <InfoItem label="模式" value={humanizeMode(failure.mode)} />
+              <InfoItem label="规模" value={String(failure.size)} />
             </div>
             {failure.stderr ? (
               <div className="stack">
                 <div className="metaRow">
-                  <div className="pill">stderr</div>
-                  <CopyButton text={failure.stderr} label="复制 stderr" />
+                  <div className="pill">标准错误</div>
+                  <CopyButton text={failure.stderr} label="复制标准错误" />
                 </div>
                 <CodeEditor value={failure.stderr} language="plaintext" readOnly height={160} />
               </div>
@@ -1257,7 +1257,7 @@ function DuelResultPanel({
                 ) : null}
               </div>
             </div>
-            <CodeEditor value={failure.input || "(empty)"} language="plaintext" readOnly height={180} />
+            <CodeEditor value={failure.input || "(空)"} language="plaintext" readOnly height={180} />
           </div>
           <DiffViewer expected={failure.expected_output} actual={failure.actual_output} />
           {Object.keys(result.compile_logs).length > 0 ? (
@@ -1266,10 +1266,10 @@ function DuelResultPanel({
               {Object.entries(result.compile_logs).map(([name, log]) => (
                 <div key={name} className="stack">
                   <div className="metaRow">
-                    <div className="pill">{name}</div>
+                    <div className="pill">{humanizeArtifactName(name)}</div>
                     <CopyButton text={log || ""} label="复制日志" />
                   </div>
-                  <CodeEditor value={log || "(empty)"} language="plaintext" readOnly height={180} />
+                  <CodeEditor value={log || "(空)"} language="plaintext" readOnly height={180} />
                 </div>
               ))}
             </div>
@@ -1298,13 +1298,13 @@ function DiffViewer({
       <div className="sectionHeader">
         <h3>输出对比</h3>
         <div className="inlineActions">
-          <CopyButton text={expected} label="复制 expected" />
-          <CopyButton text={actual} label="复制 actual" />
+          <CopyButton text={expected} label="复制期望输出" />
+          <CopyButton text={actual} label="复制实际输出" />
         </div>
       </div>
       <div className="diffGrid">
         <div className="diffCol">
-          <div className="pill">expected</div>
+          <div className="pill">期望输出</div>
           <div className="pre diffPre">
             {Array.from({ length: maxLength }, (_, index) => {
               const left = expectedLines[index] ?? "";
@@ -1320,7 +1320,7 @@ function DiffViewer({
           </div>
         </div>
         <div className="diffCol">
-          <div className="pill">actual</div>
+          <div className="pill">实际输出</div>
           <div className="pre diffPre">
             {Array.from({ length: maxLength }, (_, index) => {
               const left = expectedLines[index] ?? "";
@@ -1356,7 +1356,7 @@ function TaskLogsPanel({
           <div className={`logDot tone-${getLogTone(log.level)}`} />
           <div className="logContent">
             <div className="logMeta">
-              <span className="mono">{log.level}</span>
+              <span className="mono">{humanizeLogLevel(log.level)}</span>
               <span className="muted">{formatTime(log.time)}</span>
             </div>
             <div>{log.message}</div>
@@ -1395,7 +1395,7 @@ function asErrorMessage(error: unknown): string {
 
 function emptyProblemSpec(): ProblemSpec {
   return {
-    title: "Untitled Problem",
+    title: "未命名题目",
     statement: "",
     input_format: "",
     output_format: "",
@@ -1410,7 +1410,7 @@ function emptyProblemSpec(): ProblemSpec {
 function cloneProblemSpec(spec?: ProblemSpec | null): ProblemSpec {
   const base = spec ?? emptyProblemSpec();
   return {
-    title: base.title ?? "Untitled Problem",
+    title: base.title ?? "未命名题目",
     statement: base.statement ?? "",
     input_format: base.input_format ?? "",
     output_format: base.output_format ?? "",
@@ -1551,7 +1551,7 @@ function humanizeTaskStage(stage?: string | null): string {
     case "normalize_problem":
       return "标准化题面";
     case "extract_problem_spec":
-      return "提取 ProblemSpec";
+      return "提取结构化题面";
     case "generate_templates":
       return "生成模板";
     case "compile":
@@ -1576,6 +1576,72 @@ function humanizeIdentifier(value?: string | null): string {
     return "-";
   }
   return value.replace(/_/g, " ");
+}
+
+function humanizeProvider(provider?: string | null): string {
+  switch (provider) {
+    case "auto":
+      return "自动";
+    case "template":
+      return "模板";
+    case "openai":
+      return "OpenAI";
+    default:
+      return humanizeIdentifier(provider);
+  }
+}
+
+function humanizeArtifactName(name?: string | null): string {
+  switch (name) {
+    case "brute":
+      return "暴力解";
+    case "gen":
+    case "generator":
+      return "数据生成器";
+    case "main":
+    case "user_solution":
+      return "用户代码";
+    case "compare":
+      return "对比脚本";
+    case "readme":
+      return "说明文档";
+    default:
+      return humanizeIdentifier(name);
+  }
+}
+
+function humanizeMode(mode?: string | null): string {
+  switch (mode) {
+    case "random":
+      return "随机";
+    case "edge":
+      return "边界";
+    case "small":
+      return "小规模";
+    default:
+      return humanizeIdentifier(mode);
+  }
+}
+
+function humanizeLanguage(language?: string | null): string {
+  switch ((language ?? "").toLowerCase()) {
+    case "cpp":
+    case "c++":
+      return "C++";
+    case "python":
+    case "py":
+      return "Python";
+    case "markdown":
+    case "md":
+      return "Markdown";
+    case "plaintext":
+    case "text":
+      return "纯文本";
+    case "json":
+      return "JSON";
+    default:
+      return language || "-";
+  }
 }
 
 type BadgeTone = "neutral" | "success" | "running" | "warning" | "error";
@@ -1614,6 +1680,19 @@ function getLogTone(level: string): BadgeTone {
       return "warning";
     default:
       return "running";
+  }
+}
+
+function humanizeLogLevel(level?: string | null): string {
+  switch (level) {
+    case "info":
+      return "信息";
+    case "warning":
+      return "警告";
+    case "error":
+      return "错误";
+    default:
+      return humanizeIdentifier(level);
   }
 }
 
