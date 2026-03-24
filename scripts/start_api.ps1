@@ -13,5 +13,15 @@ if ($RedisPassword) {
     $env:ALGOHLPER_REDIS_PASSWORD = $RedisPassword
 }
 
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$venvPython = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$pythonCmd = if (Test-Path $venvPython) { $venvPython } else { "python" }
+
 Write-Host "Starting API with Redis $RedisHost`:$RedisPort ..."
-uvicorn algohlper.api.app:app --app-dir src --host $Host --port $Port --reload
+Push-Location $repoRoot
+try {
+    & $pythonCmd -m uvicorn algohlper.api.app:app --app-dir src --host $Host --port $Port --reload
+}
+finally {
+    Pop-Location
+}
