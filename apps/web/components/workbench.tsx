@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { CodeEditor } from "./code-editor";
 import { CopyButton } from "./copy-button";
+import { ProblemSpecEditor } from "./problem-spec-editor";
 
 type ArtifactRecord = {
   type: string;
@@ -37,12 +38,29 @@ type DuelResult = {
   created_at: string;
 };
 
+type ProblemSample = {
+  input: string;
+  output: string;
+};
+
+type ProblemSpec = {
+  title: string;
+  statement: string;
+  input_format: string;
+  output_format: string;
+  constraints: Record<string, string>;
+  samples: ProblemSample[];
+  problem_type_guess: string[];
+  special_notes: string[];
+  parse_confidence: Record<string, number>;
+};
+
 type ProjectRecord = {
   id: string;
   name: string;
   status: string;
   raw_problem_content?: string | null;
-  problem_spec?: unknown;
+  problem_spec?: ProblemSpec | null;
   artifacts: Record<string, ArtifactRecord>;
   last_duel_result?: DuelResult | null;
   task_ids: string[];
@@ -113,6 +131,7 @@ export function Workbench() {
   const [task, setTask] = useState<TaskRecord | null>(null);
   const [activeArtifact, setActiveArtifact] = useState("brute");
   const [projectName, setProjectName] = useState("Demo Project");
+  const [specDraft, setSpecDraft] = useState<ProblemSpec>(emptyProblemSpec());
   const [problemText, setProblemText] = useState(`# A + B Problem
 
 题目描述
@@ -177,6 +196,7 @@ int main() {
     }
     setProblemText(selected.raw_problem_content ?? "");
     setUserCode(selected.artifacts.user_solution?.code ?? userCode);
+    setSpecDraft(cloneProblemSpec(selected.problem_spec));
     const nextActiveArtifact = pickDefaultArtifact(selected.artifacts, activeArtifact);
     if (nextActiveArtifact !== activeArtifact) {
       setActiveArtifact(nextActiveArtifact);
@@ -259,6 +279,20 @@ int main() {
           language: "cpp",
           code: userCode,
         }),
+      });
+      await refreshProjects(selectedProjectId);
+    });
+  }
+
+  async function saveProblemSpec() {
+    if (!selectedProjectId) {
+      setError("先创建或选择一个项目。");
+      return;
+    }
+    await runBusy(async () => {
+      await apiFetch<ProjectRecord>(`/api/projects/${selectedProjectId}/problem-spec`, {
+        method: "PUT",
+        body: JSON.stringify(specDraft),
       });
       await refreshProjects(selectedProjectId);
     });
@@ -612,8 +646,8 @@ int main() {
             <section className="panel stack panelLarge">
               <div className="panelHeading">
                 <div>
-                  <h2>项目结构</h2>
-                  <p className="muted">ProblemSpec、产物和项目元信息。</p>
+                  <h2>ProblemSpec 编辑</h2>
+                  <p className="muted">直接编辑结构化题面，然后保存回后端。</p>
                 </div>
                 {selectedProject ? (
                   <StatusBadge label={selectedProject.status} tone={getStatusTone(selectedProject.status)} />
@@ -627,24 +661,14 @@ int main() {
                       label={`${Object.keys(selectedProject.artifacts ?? {}).length} artifacts`}
                       tone="neutral"
                     />
-                    <CopyButton
-                      text={
-                        selectedProject.problem_spec
-                          ? JSON.stringify(selectedProject.problem_spec, null, 2)
-                          : "ProblemSpec 尚未生成"
-                      }
-                      label="复制 Spec"
-                    />
                   </div>
-                  <CodeEditor
-                    value={
-                      selectedProject.problem_spec
-                        ? JSON.stringify(selectedProject.problem_spec, null, 2)
-                        : "ProblemSpec 尚未生成"
-                    }
-                    language="json"
-                    readOnly
-                    height={360}
+                  <ProblemSpecEditor
+                    value={specDraft}
+                    busy={busy}
+                    disabled={!selectedProjectId}
+                    onChange={setSpecDraft}
+                    onSave={() => void saveProblemSpec()}
+                    onReset={() => setSpecDraft(cloneProblemSpec(selectedProject.problem_spec))}
                   />
                 </>
               ) : (
@@ -988,6 +1012,38 @@ function asErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function emptyProblemSpec(): ProblemSpec {
+  return {
+    title: "Untitled Problem",
+    statement: "",
+    input_format: "",
+    output_format: "",
+    constraints: {},
+    samples: [],
+    problem_type_guess: [],
+    special_notes: [],
+    parse_confidence: {},
+  };
+}
+
+function cloneProblemSpec(spec?: ProblemSpec | null): ProblemSpec {
+  const base = spec ?? emptyProblemSpec();
+  return {
+    title: base.title ?? "Untitled Problem",
+    statement: base.statement ?? "",
+    input_format: base.input_format ?? "",
+    output_format: base.output_format ?? "",
+    constraints: { ...(base.constraints ?? {}) },
+    samples: (base.samples ?? []).map((sample) => ({
+      input: sample.input ?? "",
+      output: sample.output ?? "",
+    })),
+    problem_type_guess: [...(base.problem_type_guess ?? [])],
+    special_notes: [...(base.special_notes ?? [])],
+    parse_confidence: { ...(base.parse_confidence ?? {}) },
+  };
 }
 
 function clampInt(value: string, fallback: number, min: number, max: number): number {

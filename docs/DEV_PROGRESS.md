@@ -119,6 +119,7 @@
   - 生成参数控制（provider / self-test / repair rounds）
   - Monaco 编辑器接入（题面 / 用户代码 / 产物 / Spec / 日志）
   - 一键复制（题面 / 代码 / 产物 / 反例输入 / expected / actual / 编译日志）
+  - ProblemSpec 表单化编辑（标题 / 描述 / IO / 约束 / 样例 / 备注）
 - 已新增 `scripts/start_web.ps1`，用于本地 Windows 启动前端。
 - 已做第一轮视觉重构：
   - hero 头部

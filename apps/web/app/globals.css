@@ -560,11 +560,37 @@ button {
   gap: 10px;
 }
 
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kvRow {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.9fr) minmax(0, 1.4fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.sampleCard {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(2, 6, 23, 0.22);
+}
+
 .subtleCard {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
   background: rgba(2, 6, 23, 0.3);
+}
+
+.textareaCompact {
+  min-height: 120px;
 }
 
 .tabs {
@@ -731,7 +757,8 @@ button {
 
   .editorGrid,
   .twoCol,
-  .diffGrid {
+  .diffGrid,
+  .formGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -760,7 +787,8 @@ button {
 
   .metricGrid,
   .cardGrid,
-  .runtimeGrid {
+  .runtimeGrid,
+  .kvRow {
     grid-template-columns: 1fr;
   }
 }
