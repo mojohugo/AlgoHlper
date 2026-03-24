@@ -70,6 +70,17 @@ class GenerationRequest(BaseModel):
     )
     instructions: str | None = None
     force_overwrite: bool = True
+    self_test: bool = True
+
+
+class GenerationValidationResult(BaseModel):
+    skipped: bool = False
+    compile_logs: dict[str, str] = Field(default_factory=dict)
+    generator_smoke_ok: bool = False
+    sample_total: int = 0
+    sample_passed: int = 0
+    warnings: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
 
 
 class DuelFailure(BaseModel):

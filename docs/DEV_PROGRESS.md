@@ -32,6 +32,16 @@
 - 新增 CLI：`algohlper generate`
 - 目前 `openai provider` 已接好接口，但默认仍建议当作“带 fallback 的实验入口”。
 
+### 4.2 生成后自检
+- 新增生成资产自检服务：
+  - `brute.cpp` 编译检查
+  - `gen.cpp` 编译检查
+  - `generator smoke test`
+  - `brute` 样例回放（最多 3 个样例）
+- 当前策略：
+  - `openai provider` 默认执行自检，不通过就报错/回退
+  - `template provider` 因为本身是占位模板，默认跳过自检并显式返回 skipped
+
 ### 5. 本地对拍内核
 - 实现了 C++ 编译与执行封装，基于本机 `g++`。
 - 实现了标准对拍循环：`gen -> brute -> user -> compare`。
@@ -67,10 +77,11 @@
 - 写了题面解析测试。
 - 写了 API 烟雾测试。
 - 写了对拍测试，能稳定发现错误程序的反例。
+- 写了资产自检测试，覆盖编译成功/失败路径。
 
 ## 当前明确未完成
 
-- `openai provider` 虽已接入，但还没有做多轮 repair、结构化严格校验、编译后自动回修。
+- `openai provider` 已有基础自检，但还没有做多轮 repair、结构化严格 schema 约束、编译失败自动回修。
 - 没有 PostgreSQL / Redis / Celery。
 - 没有 Docker / gVisor Runner。
 - 没有前端页面。

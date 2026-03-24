@@ -88,3 +88,4 @@ max(a, b)
     assert payload["provider"] == "template"
     assert "brute" in payload["artifacts"]
     assert payload["warnings"]
+    assert payload["validation"]["skipped"] is True

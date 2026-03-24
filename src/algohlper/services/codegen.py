@@ -4,7 +4,8 @@ import json
 from dataclasses import dataclass
 
 from algohlper.config import Settings
-from algohlper.models import ArtifactRecord, GenerationRequest, ProblemSpec, ProjectRecord
+from algohlper.models import ArtifactRecord, GenerationRequest, GenerationValidationResult, ProblemSpec, ProjectRecord
+from algohlper.services.asset_validation import AssetValidationService
 from algohlper.services.starter_assets import build_compare_script, build_repro_readme, build_starter_artifacts
 
 
@@ -17,6 +18,7 @@ class CodeGenerationResult:
     provider: str
     artifacts: dict[str, ArtifactRecord]
     warnings: list[str]
+    validation: GenerationValidationResult
 
 
 class TemplateCodeGenerator:
@@ -34,6 +36,10 @@ class TemplateCodeGenerator:
             provider=self.provider_name,
             artifacts=filtered,
             warnings=["当前使用模板生成器，brute/gen 仍需要你或后续模型补全。"],
+            validation=GenerationValidationResult(
+                skipped=True,
+                warnings=["模板生成器产物是占位模板，默认跳过编译/样例自检。"],
+            ),
         )
 
 
@@ -42,6 +48,7 @@ class OpenAICodeGenerator:
 
     def __init__(self, settings: Settings):
         self.settings = settings
+        self.validator = AssetValidationService(settings)
 
     def generate(
         self,
@@ -94,10 +101,18 @@ class OpenAICodeGenerator:
         notes = payload.get("notes")
         warnings = [notes.strip()] if isinstance(notes, str) and notes.strip() else []
         warnings.append("OpenAI 生成结果仍建议先编译并用样例自测，再开始大规模对拍。")
+        validation = GenerationValidationResult(skipped=True)
+        if request.self_test:
+            validation = self.validator.validate_cpp_assets(spec=spec, artifacts=artifacts)
+            warnings.extend(validation.warnings)
+            if validation.errors:
+                error_message = "; ".join(validation.errors)
+                raise CodeGenerationError(f"生成资产未通过自检：{error_message}")
         return CodeGenerationResult(
             provider=self.provider_name,
             artifacts=artifacts,
             warnings=warnings,
+            validation=validation,
         )
 
 

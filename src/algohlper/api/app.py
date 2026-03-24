@@ -125,6 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "provider": generation_result.provider,
                 "artifacts": list(generation_result.artifacts.keys()),
                 "warnings": generation_result.warnings,
+                "validation": generation_result.validation.model_dump(mode="json"),
             },
             current_stage="completed",
         )
@@ -132,6 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "task": task,
             "provider": generation_result.provider,
             "warnings": generation_result.warnings,
+            "validation": generation_result.validation,
             "artifacts": generation_result.artifacts,
         }
 

@@ -8,6 +8,7 @@
 - 本地 JSON 持久化：项目、任务、代码资产、对拍结果都会落到 `.algohlper_data/`。
 - Starter 资产生成：自动生成 `brute.cpp`、`gen.cpp`、`compare.py`、`README.md` 模板，便于后续接 LLM 真正生成代码。
 - 可插拔代码生成器：新增 `template / openai / auto` 三种 provider 入口。未配置 OpenAI 时，`auto` 会自动回退到模板生成器。
+- 生成后自检：对 `openai provider` 生成的 `brute.cpp` / `gen.cpp` 会先做编译检查、generator smoke test、样例回放，再决定是否落库。
 - C++ 对拍引擎：调用本机 `g++` 编译 `brute.cpp` / `gen.cpp` / `main.cpp`，执行多轮随机对拍并返回首个失败样例。
 - FastAPI 接口：项目、题面上传、解析、资产写入、starter 资产生成、对拍、任务查询。
 - CLI：支持 `parse`、`starter`、`generate`、`duel` 四个命令。
@@ -53,6 +54,11 @@ algohlper starter .\problem.md .\out --format markdown
 ```powershell
 algohlper generate .\problem.md .\out --provider auto
 ```
+
+生成目录里还会附带：
+
+- `problem_spec.json`
+- `generation_meta.json`（记录 provider、warnings、自检结果）
 
 ### 本地对拍
 

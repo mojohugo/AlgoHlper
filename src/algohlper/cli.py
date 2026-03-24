@@ -124,6 +124,7 @@ def _write_generated_artifacts(
             {
                 "provider": result.provider,
                 "warnings": result.warnings,
+                "validation": result.validation.model_dump(mode="json"),
             },
             ensure_ascii=False,
             indent=2,
