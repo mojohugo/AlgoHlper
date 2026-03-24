@@ -82,6 +82,16 @@
   - `src/algohlper/worker/celery_app.py`
   - `src/algohlper/worker/tasks.py`
 
+### 6.3 Windows Redis 本地联调
+- 已支持通过以下环境变量直接拼 Redis URL：
+  - `ALGOHLPER_REDIS_HOST`
+  - `ALGOHLPER_REDIS_PORT`
+  - `ALGOHLPER_REDIS_PASSWORD`
+- 已新增 PowerShell 启动脚本：
+  - `scripts/start_api.ps1`
+  - `scripts/start_worker.ps1`
+- Windows 下 worker 默认建议走 `solo` pool，适合作为本地开发模式。
+
 ### 5. 本地对拍内核
 - 实现了 C++ 编译与执行封装，基于本机 `g++`。
 - 实现了标准对拍循环：`gen -> brute -> user -> compare`。
@@ -122,6 +132,7 @@
 - 写了配置兼容测试，覆盖 `CODEX_API_KEY` / `.codex/config.toml`。
 - 写了异步 API 测试，覆盖任务提交和轮询完成。
 - 写了队列 backend 测试，覆盖 Celery 不可用时自动回退到 in-process。
+- 写了 Redis URL 组装测试，覆盖 Windows 本地 Redis 密码场景。
 
 ## 当前明确未完成
 

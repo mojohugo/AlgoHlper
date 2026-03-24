@@ -58,15 +58,29 @@ $env:ALGOHLPER_TASK_QUEUE_BACKEND="inprocess"
 
 ```powershell
 $env:ALGOHLPER_TASK_QUEUE_BACKEND="celery"
-$env:ALGOHLPER_CELERY_BROKER_URL="redis://127.0.0.1:6379/0"
-$env:ALGOHLPER_CELERY_RESULT_BACKEND="redis://127.0.0.1:6379/1"
+$env:ALGOHLPER_REDIS_HOST="127.0.0.1"
+$env:ALGOHLPER_REDIS_PORT="6379"
+$env:ALGOHLPER_REDIS_PASSWORD="123456"
 ```
 
 Worker 启动命令：
 
 ```powershell
-celery -A algohlper.worker.tasks.celery_app worker --loglevel=info
+celery -A algohlper.worker.tasks.celery_app worker --loglevel=info --pool=solo
 ```
+
+或者直接用仓库里给你的 PowerShell 脚本：
+
+```powershell
+.\scripts\start_worker.ps1 -RedisPassword 123456
+.\scripts\start_api.ps1 -RedisPassword 123456
+```
+
+说明：
+- 你的环境是 Windows，所以 Celery worker 默认建议用 `--pool=solo`。Celery 官方文档说明 Windows 不再正式支持，`solo` 池仍可用，适合本地开发。
+- 官方文档：  
+  - Celery workers on Windows: https://docs.celeryq.dev/en/stable/faq.html#does-celery-support-windows  
+  - Celery Redis broker: https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html
 
 打开：<http://127.0.0.1:8000/docs>
 

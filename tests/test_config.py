@@ -44,3 +44,15 @@ def test_celery_backend_falls_back_to_inprocess_when_package_missing(tmp_path) -
     settings = Settings(data_dir=tmp_path, task_queue_backend="celery")
     queue = create_task_queue(settings)
     assert isinstance(queue, InProcessTaskQueue)
+
+
+def test_settings_builds_redis_urls_from_windows_style_env(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("ALGOHLPER_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ALGOHLPER_REDIS_HOST", "127.0.0.1")
+    monkeypatch.setenv("ALGOHLPER_REDIS_PORT", "6379")
+    monkeypatch.setenv("ALGOHLPER_REDIS_PASSWORD", "123456")
+    monkeypatch.delenv("ALGOHLPER_CELERY_BROKER_URL", raising=False)
+    monkeypatch.delenv("ALGOHLPER_CELERY_RESULT_BACKEND", raising=False)
+    settings = Settings.from_env()
+    assert settings.celery_broker_url == "redis://:123456@127.0.0.1:6379/0"
+    assert settings.celery_result_backend == "redis://:123456@127.0.0.1:6379/1"
