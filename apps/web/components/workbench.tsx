@@ -293,136 +293,259 @@ int main() {
 
   return (
     <main className="page">
-      <section className="header">
-        <div>
-          <h1>AlgoHlper Workbench</h1>
-          <div className="muted">最小前端工作台：项目 → 题面 → 异步生成 → 用户代码 → 异步对拍</div>
+      <section className="hero panel">
+        <div className="heroGlow" />
+        <div className="heroContent">
+          <div className="eyebrow">AlgoHlper / Workbench</div>
+          <div className="header">
+            <div>
+              <h1>算法对拍工作台</h1>
+              <div className="muted">
+                项目、题面、代码生成、异步任务和失败样例放在同一个工作区里。
+              </div>
+            </div>
+            <div className="headerMeta">
+              <StatusBadge label={`API ${API_BASE_URL}`} tone="neutral" />
+              <StatusBadge
+                label={busy ? "请求处理中" : "空闲"}
+                tone={busy ? "running" : "success"}
+              />
+            </div>
+          </div>
         </div>
-        <div className="status">API: {API_BASE_URL}</div>
       </section>
 
-      {error ? <section className="panel error">错误：{error}</section> : null}
+      {error ? (
+        <section className="panel banner bannerError">
+          <div className="bannerTitle">请求失败</div>
+          <div>{error}</div>
+        </section>
+      ) : null}
 
       <section className="layout">
-        <aside className="panel stack">
-          <h2>项目</h2>
-          <input
-            className="input"
-            value={projectName}
-            onChange={(event) => setProjectName(event.target.value)}
-            placeholder="项目名"
-          />
-          <div className="buttonRow">
-            <button className="button" onClick={() => void createProject()} disabled={busy}>
-              新建项目
-            </button>
-            <button className="button secondary" onClick={() => void refreshProjects()} disabled={busy}>
-              刷新
-            </button>
-          </div>
-
-          <div className="projectList">
-            {projects.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                className={`projectItem ${project.id === selectedProjectId ? "active" : ""}`}
-                onClick={() => setSelectedProjectId(project.id)}
-              >
-                <div>{project.name}</div>
-                <div className="muted">{project.id}</div>
-                <div className="pill">status: {project.status}</div>
-              </button>
-            ))}
-            {projects.length === 0 ? <div className="muted">还没有项目。</div> : null}
-          </div>
-        </aside>
-
-        <section className="grid">
-          <section className="panel stack">
-            <h2>工作区</h2>
-            <div className="buttonRow">
-              <button className="button" onClick={() => void saveProblem()} disabled={busy || !selectedProjectId}>
-                保存题面
-              </button>
-              <button className="button secondary" onClick={() => void startParse()} disabled={busy || !selectedProjectId}>
-                异步解析
-              </button>
-              <select className="select" value={provider} onChange={(event) => setProvider(event.target.value)}>
-                <option value="auto">auto</option>
-                <option value="template">template</option>
-                <option value="openai">openai</option>
-              </select>
-              <button className="button secondary" onClick={() => void startGenerate()} disabled={busy || !selectedProjectId}>
-                异步生成
-              </button>
-              <button className="button ghost" onClick={() => void saveUserSolution()} disabled={busy || !selectedProjectId}>
-                保存用户代码
-              </button>
+        <aside className="sidebar stack">
+          <section className="panel stack sidebarCard">
+            <div className="panelHeading">
+              <div>
+                <h2>新建项目</h2>
+                <p className="muted">先建项目，再保存题面并发起异步任务。</p>
+              </div>
+            </div>
+            <label className="field">
+              <span className="fieldLabel">项目名</span>
               <input
                 className="input"
-                value={duelRounds}
-                onChange={(event) => setDuelRounds(event.target.value)}
-                style={{ maxWidth: 120 }}
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+                placeholder="项目名"
               />
-              <button className="button ghost" onClick={() => void startDuel()} disabled={busy || !selectedProjectId}>
-                异步对拍
+            </label>
+            <div className="buttonRow">
+              <button className="button" onClick={() => void createProject()} disabled={busy}>
+                新建项目
+              </button>
+              <button className="button secondary" onClick={() => void refreshProjects()} disabled={busy}>
+                刷新列表
               </button>
             </div>
-            <div className="twoCol">
-              <div className="stack">
-                <h3>题面</h3>
-                <textarea className="textarea" value={problemText} onChange={(event) => setProblemText(event.target.value)} />
+          </section>
+
+          <section className="panel stack sidebarCard">
+            <div className="panelHeading">
+              <div>
+                <h2>项目列表</h2>
+                <p className="muted">点击切换上下文。</p>
               </div>
-              <div className="stack">
-                <h3>用户代码</h3>
-                <textarea className="textarea" value={userCode} onChange={(event) => setUserCode(event.target.value)} />
+              <div className="pill">{projects.length} 项</div>
+            </div>
+
+            <div className="projectList">
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  className={`projectItem ${project.id === selectedProjectId ? "active" : ""}`}
+                  onClick={() => setSelectedProjectId(project.id)}
+                >
+                  <div className="projectTop">
+                    <strong>{project.name}</strong>
+                    <StatusBadge label={project.status} tone={getStatusTone(project.status)} />
+                  </div>
+                  <div className="muted mono">{project.id}</div>
+                  <div className="projectMeta">updated {formatTime(project.updated_at)}</div>
+                </button>
+              ))}
+              {projects.length === 0 ? <div className="emptyState">还没有项目，先在上面建一个。</div> : null}
+            </div>
+          </section>
+        </aside>
+
+        <section className="content stack">
+          <section className="metricGrid">
+            <MetricCard
+              title="当前项目"
+              value={selectedProject?.name ?? "未选择"}
+              meta={selectedProject?.id ?? "请先在左侧选择项目"}
+            />
+            <MetricCard
+              title="项目状态"
+              value={selectedProject?.status ?? "draft"}
+              meta={`artifacts ${Object.keys(selectedProject?.artifacts ?? {}).length}`}
+              tone={getStatusTone(selectedProject?.status)}
+            />
+            <MetricCard
+              title="最近任务"
+              value={task?.type ?? "none"}
+              meta={task ? `${task.status} / ${task.current_stage ?? "-"}` : "等待任务"}
+              tone={getStatusTone(task?.status)}
+            />
+            <MetricCard
+              title="对拍轮数"
+              value={duelRounds}
+              meta="当前发起参数"
+            />
+          </section>
+
+          <section className="panel stack panelLarge">
+            <div className="panelHeading">
+              <div>
+                <h2>编辑区</h2>
+                <p className="muted">先保存题面和用户代码，再触发解析 / 生成 / 对拍。</p>
+              </div>
+            </div>
+
+            <div className="toolbar">
+              <div className="toolbarGroup">
+                <button className="button" onClick={() => void saveProblem()} disabled={busy || !selectedProjectId}>
+                  保存题面
+                </button>
+                <button className="button secondary" onClick={() => void startParse()} disabled={busy || !selectedProjectId}>
+                  异步解析
+                </button>
+              </div>
+
+              <div className="toolbarGroup">
+                <label className="field compactField">
+                  <span className="fieldLabel">生成器</span>
+                  <select className="select" value={provider} onChange={(event) => setProvider(event.target.value)}>
+                    <option value="auto">auto</option>
+                    <option value="template">template</option>
+                    <option value="openai">openai</option>
+                  </select>
+                </label>
+                <button className="button secondary" onClick={() => void startGenerate()} disabled={busy || !selectedProjectId}>
+                  异步生成
+                </button>
+              </div>
+
+              <div className="toolbarGroup">
+                <button className="button ghost" onClick={() => void saveUserSolution()} disabled={busy || !selectedProjectId}>
+                  保存用户代码
+                </button>
+                <label className="field compactField fieldShort">
+                  <span className="fieldLabel">轮数</span>
+                  <input
+                    className="input"
+                    value={duelRounds}
+                    onChange={(event) => setDuelRounds(event.target.value)}
+                  />
+                </label>
+                <button className="button ghost" onClick={() => void startDuel()} disabled={busy || !selectedProjectId}>
+                  异步对拍
+                </button>
+              </div>
+            </div>
+
+            <div className="editorGrid">
+              <div className="editorCard">
+                <div className="editorHeader">
+                  <div>
+                    <h3>题面</h3>
+                    <div className="muted">Markdown / text / LaTeX 文本输入。</div>
+                  </div>
+                </div>
+                <textarea className="textarea editorArea" value={problemText} onChange={(event) => setProblemText(event.target.value)} />
+              </div>
+              <div className="editorCard">
+                <div className="editorHeader">
+                  <div>
+                    <h3>用户代码</h3>
+                    <div className="muted">当前先用纯文本编辑，后面再切 Monaco。</div>
+                  </div>
+                </div>
+                <textarea className="textarea editorArea" value={userCode} onChange={(event) => setUserCode(event.target.value)} />
               </div>
             </div>
           </section>
 
           <section className="twoCol">
-            <section className="panel stack">
-              <h2>当前任务</h2>
+            <section className="panel stack panelLarge">
+              <div className="panelHeading">
+                <div>
+                  <h2>当前任务</h2>
+                  <p className="muted">异步任务状态、阶段和日志。</p>
+                </div>
+                {task ? (
+                  <StatusBadge
+                    label={`${task.status} · ${task.progress}%`}
+                    tone={getStatusTone(task.status)}
+                  />
+                ) : null}
+              </div>
               {task ? (
                 <>
-                  <div className="status">
-                    {task.type} / {task.status} / {task.current_stage ?? "-"} / {task.progress}%
+                  <div className="metaRow">
+                    <StatusBadge label={task.type} tone="neutral" />
+                    <StatusBadge label={task.current_stage ?? "-"} tone="neutral" />
+                    <StatusBadge label={`progress ${task.progress}%`} tone="running" />
                   </div>
-                  {task.error ? <div className="error">{task.error}</div> : null}
-                  <div className="pre">
-                    {task.logs.length > 0
-                      ? task.logs.map((log) => `[${log.level}] ${log.message}`).join("\n")
-                      : "暂无日志"}
-                  </div>
+                  {task.error ? <div className="banner bannerError">{task.error}</div> : null}
+                  <TaskLogsPanel logs={task.logs} />
                 </>
               ) : (
-                <div className="muted">还没有任务。</div>
+                <div className="emptyState">还没有任务。先保存题面，然后点“异步解析”或“异步生成”。</div>
               )}
             </section>
 
-            <section className="panel stack">
-              <h2>当前项目</h2>
+            <section className="panel stack panelLarge">
+              <div className="panelHeading">
+                <div>
+                  <h2>项目结构</h2>
+                  <p className="muted">ProblemSpec、产物和项目元信息。</p>
+                </div>
+                {selectedProject ? (
+                  <StatusBadge label={selectedProject.status} tone={getStatusTone(selectedProject.status)} />
+                ) : null}
+              </div>
               {selectedProject ? (
                 <>
-                  <div className="pill">{selectedProject.id}</div>
-                  <div className="pill">status: {selectedProject.status}</div>
-                  <div>Artifacts: {Object.keys(selectedProject.artifacts ?? {}).join(", ") || "无"}</div>
-                  <div className="pre">
+                  <div className="metaRow">
+                    <StatusBadge label={selectedProject.id} tone="neutral" />
+                    <StatusBadge
+                      label={`${Object.keys(selectedProject.artifacts ?? {}).length} artifacts`}
+                      tone="neutral"
+                    />
+                  </div>
+                  <div className="pre projectSpec">
                     {selectedProject.problem_spec
                       ? JSON.stringify(selectedProject.problem_spec, null, 2)
                       : "ProblemSpec 尚未生成"}
                   </div>
                 </>
               ) : (
-                <div className="muted">请选择项目。</div>
+                <div className="emptyState">请选择项目。</div>
               )}
             </section>
           </section>
 
           <section className="twoCol">
-            <section className="panel stack">
-              <h2>生成产物预览</h2>
+            <section className="panel stack panelLarge">
+              <div className="panelHeading">
+                <div>
+                  <h2>生成产物</h2>
+                  <p className="muted">切换不同产物查看当前代码。</p>
+                </div>
+              </div>
               <ArtifactTabs
                 project={selectedProject}
                 activeArtifact={activeArtifact}
@@ -430,14 +553,39 @@ int main() {
               />
             </section>
 
-            <section className="panel stack">
-              <h2>对拍结果</h2>
+            <section className="panel stack panelLarge">
+              <div className="panelHeading">
+                <div>
+                  <h2>对拍结果</h2>
+                  <p className="muted">首个失败样例、输出差异和编译日志。</p>
+                </div>
+              </div>
               <DuelResultPanel result={selectedProject?.last_duel_result ?? null} />
             </section>
           </section>
         </section>
       </section>
     </main>
+  );
+}
+
+function MetricCard({
+  title,
+  value,
+  meta,
+  tone = "neutral",
+}: {
+  title: string;
+  value: string;
+  meta: string;
+  tone?: BadgeTone;
+}) {
+  return (
+    <section className={`metricCard tone-${tone}`}>
+      <div className="metricTitle">{title}</div>
+      <div className="metricValue">{value}</div>
+      <div className="metricMeta">{meta}</div>
+    </section>
   );
 }
 
@@ -463,12 +611,12 @@ function ArtifactTabs({
             className={`tabButton ${artifactName === activeArtifact ? "active" : ""}`}
             onClick={() => onChange(artifactName)}
           >
-            {artifactName}
+            <span>{artifactName}</span>
             <span className="muted">({value.language})</span>
           </button>
         ))}
       </div>
-      <div className="code">{artifact?.code ?? "当前没有可预览的产物。"}</div>
+      <div className="code artifactCode">{artifact?.code ?? "当前没有可预览的产物。"}</div>
     </div>
   );
 }
@@ -482,12 +630,13 @@ function DuelResultPanel({ result }: { result: DuelResult | null }) {
 
   return (
     <div className="stack">
-      <div className="status">
-        {result.status} / {result.rounds_completed} / {result.rounds_requested}
+      <div className="metaRow">
+        <StatusBadge label={result.status} tone={getStatusTone(result.status)} />
+        <StatusBadge label={`rounds ${result.rounds_completed}/${result.rounds_requested}`} tone="neutral" />
       </div>
       <div>{result.summary}</div>
       {result.warnings.length > 0 ? (
-        <div className="stack">
+        <div className="stack warningList">
           {result.warnings.map((warning) => (
             <div key={warning} className="muted">
               - {warning}
@@ -498,10 +647,15 @@ function DuelResultPanel({ result }: { result: DuelResult | null }) {
       {failure ? (
         <>
           <div className="card stack">
-            <div className="pill">失败样例</div>
-            <div>reason: {humanizeReason(failure.reason)}</div>
-            <div>
-              round={failure.round} seed={failure.seed} mode={failure.mode} size={failure.size}
+            <div className="metaRow">
+              <StatusBadge label="失败样例" tone="error" />
+              <StatusBadge label={humanizeReason(failure.reason)} tone="error" />
+            </div>
+            <div className="cardGrid">
+              <InfoItem label="round" value={String(failure.round)} />
+              <InfoItem label="seed" value={String(failure.seed)} />
+              <InfoItem label="mode" value={failure.mode} />
+              <InfoItem label="size" value={String(failure.size)} />
             </div>
             {failure.stderr ? <div className="pre">{failure.stderr}</div> : null}
           </div>
@@ -523,7 +677,7 @@ function DuelResultPanel({ result }: { result: DuelResult | null }) {
           ) : null}
         </>
       ) : (
-        <div className="success">本轮没有发现失败样例。</div>
+        <div className="banner bannerSuccess">本轮没有发现失败样例。</div>
       )}
     </div>
   );
@@ -581,6 +735,52 @@ function DiffViewer({
   );
 }
 
+function TaskLogsPanel({
+  logs,
+}: {
+  logs: Array<{ level: string; message: string; time: string }>;
+}) {
+  if (logs.length === 0) {
+    return <div className="emptyState">暂无日志。</div>;
+  }
+
+  return (
+    <div className="logList">
+      {logs.map((log, index) => (
+        <div key={`${log.time}-${index}`} className="logItem">
+          <div className={`logDot tone-${getLogTone(log.level)}`} />
+          <div className="logContent">
+            <div className="logMeta">
+              <span className="mono">{log.level}</span>
+              <span className="muted">{formatTime(log.time)}</span>
+            </div>
+            <div>{log.message}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="infoItem">
+      <div className="infoLabel">{label}</div>
+      <div className="infoValue">{value}</div>
+    </div>
+  );
+}
+
+function StatusBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: BadgeTone;
+}) {
+  return <span className={`statusBadge tone-${tone}`}>{label}</span>;
+}
+
 function asErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -622,4 +822,51 @@ function humanizeReason(reason: string): string {
     default:
       return reason;
   }
+}
+
+type BadgeTone = "neutral" | "success" | "running" | "warning" | "error";
+
+function getStatusTone(status?: string | null): BadgeTone {
+  switch (status) {
+    case "completed":
+    case "ready":
+    case "parsed":
+    case "counterexample_found":
+      return "success";
+    case "running":
+    case "dueling":
+    case "queued":
+    case "generating":
+    case "self_testing":
+      return "running";
+    case "failed":
+    case "error":
+      return "error";
+    case "draft":
+      return "warning";
+    default:
+      return "neutral";
+  }
+}
+
+function getLogTone(level: string): BadgeTone {
+  switch (level) {
+    case "error":
+      return "error";
+    case "warning":
+      return "warning";
+    default:
+      return "running";
+  }
+}
+
+function formatTime(value?: string): string {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
 }
