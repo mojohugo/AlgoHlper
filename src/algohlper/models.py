@@ -84,6 +84,22 @@ class GenerationValidationResult(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class QuickRunRequest(BaseModel):
+    code: str = Field(min_length=1)
+    input: str = ""
+    time_limit_ms: int = Field(default=1000, ge=10, le=60_000)
+
+
+class QuickRunResult(BaseModel):
+    compile_ok: bool = False
+    compile_log: str = ""
+    exit_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    time_ms: int = 0
+    timed_out: bool = False
+
+
 class RuntimeOpenAIInfo(BaseModel):
     configured: bool = False
     sdk_installed: bool = False

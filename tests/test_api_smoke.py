@@ -165,3 +165,34 @@ def test_api_runtime_endpoint_reports_environment(tmp_path) -> None:
     assert payload["redis"]["port"] == 6379
     assert payload["redis"]["password_configured"] is True
     assert payload["toolchain"]["cxx"] == "g++"
+
+
+def test_api_run_user_endpoint_executes_code(tmp_path) -> None:
+    app = create_app(Settings(data_dir=tmp_path, cxx="g++"))
+    client = TestClient(app)
+
+    project = client.post("/api/projects", json={"name": "quick-run"}).json()
+    project_id = project["id"]
+
+    code = r"""
+#include <bits/stdc++.h>
+using namespace std;
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    long long a, b;
+    if (!(cin >> a >> b)) return 0;
+    cout << a + b << "\n";
+    return 0;
+}
+"""
+
+    response = client.post(
+        f"/api/projects/{project_id}/run-user",
+        json={"code": code, "input": "2 5\n", "time_limit_ms": 1000},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["compile_ok"] is True
+    assert payload["stdout"] == "7\n"
+    assert payload["timed_out"] is False

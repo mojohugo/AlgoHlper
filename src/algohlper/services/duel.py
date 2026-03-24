@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from algohlper.config import Settings
-from algohlper.models import DuelFailure, DuelRequest, DuelResult
+from algohlper.models import DuelFailure, DuelRequest, DuelResult, QuickRunResult
 
 
 @dataclass(slots=True)
@@ -23,6 +23,34 @@ class ExecutionResult:
 class DuelService:
     def __init__(self, settings: Settings):
         self.settings = settings
+
+    def run_user_code(self, *, code: str, input_text: str, time_limit_ms: int) -> QuickRunResult:
+        with tempfile.TemporaryDirectory(prefix="algohlper-run-") as temp_dir:
+            workdir = Path(temp_dir)
+            compile_logs: dict[str, str] = {}
+            user_bin = self._compile_cpp(workdir, "main", code, compile_logs)
+            compile_log = compile_logs.get("main", "")
+            if user_bin is None:
+                return QuickRunResult(
+                    compile_ok=False,
+                    compile_log=compile_log,
+                )
+
+            run_result = self._run_program(
+                user_bin,
+                [],
+                stdin_text=input_text,
+                time_limit_ms=time_limit_ms,
+            )
+            return QuickRunResult(
+                compile_ok=True,
+                compile_log=compile_log,
+                exit_code=run_result.exit_code,
+                stdout=run_result.stdout,
+                stderr=run_result.stderr,
+                time_ms=run_result.time_ms,
+                timed_out=run_result.timed_out,
+            )
 
     def duel(self, brute_code: str, generator_code: str, user_code: str, request: DuelRequest) -> DuelResult:
         warnings = [

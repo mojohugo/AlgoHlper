@@ -15,6 +15,8 @@ from algohlper.models import (
     ProblemSpec,
     ProblemTextInput,
     ProjectRecord,
+    QuickRunRequest,
+    QuickRunResult,
     RuntimeInfo,
     RuntimeOpenAIInfo,
     RuntimeQueueInfo,
@@ -212,6 +214,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         attach_task(project, task.id, store)
         queue.submit_duel(project_id=project_id, task_id=task.id, payload=payload)
         return {"task": task}
+
+    @app.post("/api/projects/{project_id}/run-user", response_model=QuickRunResult)
+    def run_user_code(project_id: str, payload: QuickRunRequest) -> QuickRunResult:
+        get_project_or_404(store, project_id)
+        return duel_service.run_user_code(
+            code=payload.code,
+            input_text=payload.input,
+            time_limit_ms=payload.time_limit_ms,
+        )
 
     @app.get("/api/projects/{project_id}/duel-result")
     def get_duel_result(project_id: str):

@@ -105,6 +105,16 @@ type RuntimeInfo = {
   };
 };
 
+type QuickRunResult = {
+  compile_ok: boolean;
+  compile_log: string;
+  exit_code?: number | null;
+  stdout: string;
+  stderr: string;
+  time_ms: number;
+  timed_out: boolean;
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
 
@@ -172,6 +182,9 @@ int main() {
   const [selfTest, setSelfTest] = useState(true);
   const [repairRounds, setRepairRounds] = useState("1");
   const [duelRounds, setDuelRounds] = useState("50");
+  const [quickInput, setQuickInput] = useState("");
+  const [quickRunTimeLimitMs, setQuickRunTimeLimitMs] = useState("1000");
+  const [quickRunResult, setQuickRunResult] = useState<QuickRunResult | null>(null);
   const [error, setError] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
@@ -197,6 +210,7 @@ int main() {
     setProblemText(selected.raw_problem_content ?? "");
     setUserCode(selected.artifacts.user_solution?.code ?? userCode);
     setSpecDraft(cloneProblemSpec(selected.problem_spec));
+    setQuickRunResult(null);
     const nextActiveArtifact = pickDefaultArtifact(selected.artifacts, activeArtifact);
     if (nextActiveArtifact !== activeArtifact) {
       setActiveArtifact(nextActiveArtifact);
@@ -354,6 +368,33 @@ int main() {
       );
       setTask(response.task);
     });
+  }
+
+  async function runQuickUserCode() {
+    if (!selectedProjectId) {
+      setError("先创建或选择一个项目。");
+      return;
+    }
+    await runBusy(async () => {
+      const response = await apiFetch<QuickRunResult>(
+        `/api/projects/${selectedProjectId}/run-user`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            code: userCode,
+            input: quickInput,
+            time_limit_ms: clampInt(quickRunTimeLimitMs, 1000, 10, 60_000),
+          }),
+        },
+      );
+      setQuickRunResult(response);
+    });
+  }
+
+  function fillQuickInputFromFailure() {
+    const failureInput = selectedProject?.last_duel_result?.failure?.input ?? "";
+    setQuickInput(failureInput);
+    setQuickRunResult(null);
   }
 
   async function runBusy(action: () => Promise<void>) {
@@ -677,6 +718,44 @@ int main() {
             </section>
           </section>
 
+          <section className="panel stack panelLarge">
+            <div className="panelHeading">
+              <div>
+                <h2>快速运行</h2>
+                <p className="muted">用当前编辑器里的 user_solution 跑单组输入，不用先发起完整对拍。</p>
+              </div>
+              <div className="metaRow">
+                <label className="field compactField fieldShort">
+                  <span className="fieldLabel">时限 ms</span>
+                  <input
+                    className="input"
+                    value={quickRunTimeLimitMs}
+                    onChange={(event) => setQuickRunTimeLimitMs(event.target.value)}
+                  />
+                </label>
+                <button
+                  className="button ghost"
+                  onClick={fillQuickInputFromFailure}
+                  disabled={busy || !selectedProject?.last_duel_result?.failure?.input}
+                >
+                  回填反例输入
+                </button>
+                <button
+                  className="button secondary"
+                  onClick={() => void runQuickUserCode()}
+                  disabled={busy || !selectedProjectId}
+                >
+                  运行当前代码
+                </button>
+              </div>
+            </div>
+            <QuickRunPanel
+              input={quickInput}
+              onInputChange={setQuickInput}
+              result={quickRunResult}
+            />
+          </section>
+
           <section className="twoCol">
             <section className="panel stack panelLarge">
               <div className="panelHeading">
@@ -699,7 +778,10 @@ int main() {
                   <p className="muted">首个失败样例、输出差异和编译日志。</p>
                 </div>
               </div>
-              <DuelResultPanel result={selectedProject?.last_duel_result ?? null} />
+              <DuelResultPanel
+                result={selectedProject?.last_duel_result ?? null}
+                onUseFailureInput={fillQuickInputFromFailure}
+              />
             </section>
           </section>
         </section>
@@ -827,7 +909,96 @@ function ArtifactTabs({
   );
 }
 
-function DuelResultPanel({ result }: { result: DuelResult | null }) {
+function QuickRunPanel({
+  input,
+  onInputChange,
+  result,
+}: {
+  input: string;
+  onInputChange: (value: string) => void;
+  result: QuickRunResult | null;
+}) {
+  return (
+    <div className="stack">
+      <div className="editorHeader">
+        <div>
+          <h3>测试输入</h3>
+          <div className="muted">这里可以粘贴样例、反例或你手工构造的数据。</div>
+        </div>
+        <div className="editorActions">
+          <CopyButton text={input} label="复制输入" />
+        </div>
+      </div>
+      <CodeEditor value={input} language="plaintext" onChange={onInputChange} height={180} />
+
+      {result ? (
+        <div className="stack">
+          <div className="metaRow">
+            <StatusBadge
+              label={result.compile_ok ? "编译成功" : "编译失败"}
+              tone={result.compile_ok ? "success" : "error"}
+            />
+            <StatusBadge
+              label={result.timed_out ? "运行超时" : `exit ${result.exit_code ?? "-"}`}
+              tone={result.timed_out ? "warning" : result.compile_ok ? "neutral" : "error"}
+            />
+            <StatusBadge label={`${result.time_ms} ms`} tone="neutral" />
+          </div>
+
+          <div className="quickRunGrid">
+            <section className="stack">
+              <div className="sectionHeader">
+                <h3>stdout</h3>
+                <CopyButton text={result.stdout} label="复制 stdout" />
+              </div>
+              <CodeEditor
+                value={result.stdout || "(empty)"}
+                language="plaintext"
+                readOnly
+                height={180}
+              />
+            </section>
+            <section className="stack">
+              <div className="sectionHeader">
+                <h3>stderr</h3>
+                <CopyButton text={result.stderr} label="复制 stderr" />
+              </div>
+              <CodeEditor
+                value={result.stderr || "(empty)"}
+                language="plaintext"
+                readOnly
+                height={180}
+              />
+            </section>
+          </div>
+
+          <section className="stack">
+            <div className="sectionHeader">
+              <h3>编译日志</h3>
+              <CopyButton text={result.compile_log} label="复制编译日志" />
+            </div>
+            <CodeEditor
+              value={result.compile_log || "(empty)"}
+              language="plaintext"
+              readOnly
+              height={160}
+            />
+          </section>
+        </div>
+      ) : (
+        <div className="emptyState">还没有运行结果。填入输入后点“运行当前代码”。</div>
+      )}
+    </div>
+  );
+}
+
+function DuelResultPanel({
+  result,
+  onUseFailureInput,
+}: {
+  result: DuelResult | null;
+  onUseFailureInput?: () => void;
+}) {
   if (!result) {
     return <div className="muted">还没有对拍结果</div>;
   }
@@ -876,7 +1047,14 @@ function DuelResultPanel({ result }: { result: DuelResult | null }) {
           <div className="stack">
             <div className="sectionHeader">
               <h3>输入</h3>
-              <CopyButton text={failure.input || ""} label="复制输入" />
+              <div className="inlineActions">
+                <CopyButton text={failure.input || ""} label="复制输入" />
+                {onUseFailureInput ? (
+                  <button type="button" className="button secondary buttonSmall" onClick={onUseFailureInput}>
+                    回填到快测
+                  </button>
+                ) : null}
+              </div>
             </div>
             <CodeEditor value={failure.input || "(empty)"} language="plaintext" readOnly height={180} />
           </div>

@@ -16,8 +16,11 @@
 - 最小前端工作台：新增 `apps/web`，可直接操作项目、题面、异步生成、用户代码上传与异步对拍。
 - 前端结果视图：新增产物标签页、失败样例卡片、expected/actual 输出 diff，便于直接看首个反例。
 - 前端视觉重构：重新整理了侧栏、指标卡片、编辑区和日志区布局，当前页面已经更接近工作台形态。
+- 前端 Monaco 工作台：题面、用户代码、产物、Spec、日志都已切到 Monaco 编辑器，并支持一键复制。
+- 前端 ProblemSpec 表单编辑：可直接修改标题、描述、输入输出、约束、样例与备注后保存。
+- 前端快速运行：支持把对拍失败输入一键回填到“快速运行”面板，直接运行当前 `user_solution` 看 stdout/stderr。
 - C++ 对拍引擎：调用本机 `g++` 编译 `brute.cpp` / `gen.cpp` / `main.cpp`，执行多轮随机对拍并返回首个失败样例。
-- FastAPI 接口：项目、题面上传、解析、资产写入、starter 资产生成、对拍、任务查询。
+- FastAPI 接口：项目、题面上传、解析、资产写入、starter 资产生成、对拍、快速运行、任务查询。
 - CLI：支持 `parse`、`starter`、`generate`、`duel` 四个命令。
 - Pytest 覆盖：题面解析、API 烟雾测试、对拍发现反例。
 
@@ -120,6 +123,13 @@ npm run dev -- --port 3000
 http://127.0.0.1:3000
 ```
 
+你现在还能直接在前端里：
+
+- 编辑 `ProblemSpec`
+- 把对拍失败输入回填到快速运行面板
+- 用当前编辑器里的 `user_solution` 跑单组输入
+- 直接查看 stdout / stderr / 编译日志
+
 ## CLI 示例
 
 ### 解析题面
@@ -167,7 +177,8 @@ algohlper duel --brute .\out\brute.cpp --generator .\out\gen.cpp --user .\main.c
 6. `POST /api/projects/{project_id}/artifacts` 覆盖 `brute` / `generator` / `user_solution`
 7. `POST /api/projects/{project_id}/duel`
 8. `POST /api/projects/{project_id}/duel-async`
-9. `GET /api/tasks/{task_id}` 或 `GET /api/projects/{project_id}/duel-result`
+9. `POST /api/projects/{project_id}/run-user`
+10. `GET /api/tasks/{task_id}` 或 `GET /api/projects/{project_id}/duel-result`
 
 ## 推荐下一个开发步骤
 
