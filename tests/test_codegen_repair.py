@@ -1,3 +1,4 @@
+import json
 import sys
 import types
 
@@ -80,3 +81,59 @@ int main(int argc, char** argv) {
     assert result.validation.sample_passed == 1
     assert len(calls) == 2
     assert "generator" in result.artifacts
+
+
+def test_openai_codegen_accepts_sse_string_response(monkeypatch, tmp_path) -> None:
+    payload = {
+        "brute_cpp": "int main() { return 0; }",
+        "generator_cpp": "int main(int argc, char** argv) { return argc > 10 ? 1 : 0; }",
+        "notes": "streamed",
+    }
+    payload_text = json.dumps(payload, ensure_ascii=False)
+    sse_response = (
+        "event: response.created\n"
+        'data: {"type":"response.created","response":{"id":"resp_1","output":[]}}\n\n'
+        "event: response.output_text.done\n"
+        f"data: {json.dumps({'type': 'response.output_text.done', 'text': payload_text}, ensure_ascii=False)}\n\n"
+        "event: response.completed\n"
+        f"data: {json.dumps({'type': 'response.completed', 'response': {'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': payload_text}]}]}}, ensure_ascii=False)}\n\n"
+    )
+
+    calls: list[dict] = []
+
+    class FakeResponses:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            return sse_response
+
+    class FakeOpenAI:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.responses = FakeResponses()
+
+    monkeypatch.setitem(sys.modules, "openai", types.SimpleNamespace(OpenAI=FakeOpenAI))
+
+    settings = Settings(data_dir=tmp_path, openai_api_key="test-key")
+    generator = OpenAICodeGenerator(settings)
+    spec = ProblemSpec(title="SSE Demo")
+    project = ProjectRecord(
+        id="prj_sse",
+        name="sse-demo",
+        raw_problem_content="# SSE Demo\n",
+        problem_spec=spec,
+    )
+
+    result = generator.generate(
+        project=project,
+        spec=spec,
+        request=GenerationRequest(provider="openai", self_test=False),
+    )
+
+    assert result.provider == "openai"
+    assert result.artifacts["brute"].code == payload["brute_cpp"]
+    assert result.artifacts["generator"].code == payload["generator_cpp"]
+    assert any("streamed" in warning for warning in result.warnings)
+    assert result.validation.skipped is True
+    assert calls[0]["text"]["format"]["type"] == "json_schema"
+    assert calls[0]["input"][0]["role"] == "developer"
+    assert calls[0]["input"][1]["role"] == "user"

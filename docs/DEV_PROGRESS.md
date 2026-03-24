@@ -59,6 +59,16 @@
   - `model_providers.<provider>.env_key`
 - 这样本地已经配好的 Codex 环境，可以直接给项目复用。
 
+### 4.5 非标准 Responses 返回兼容
+- 已修复部分兼容 OpenAI 协议的网关在 `responses.create()` 中返回 SSE 字符串时，前端报 `OpenAI 返回空内容，未生成任何资产` 的问题。
+- 生成请求已改成 `developer + user input` 形式，并启用 `json_schema` Structured Outputs，避免模型先输出“我先检查工作区”之类的叙述文本。
+- 现在会兼容提取以下返回形态中的文本：
+  - 官方 SDK `response.output_text`
+  - `response.output[*].content[*].text`
+  - SSE 事件流字符串中的 `response.output_text.done` / `response.completed`
+- 对从 Codex 配置继承来的 `xhigh` reasoning 会在生成链路中降到 `medium`，避免本地页面长时间卡死。
+- JSON 解析失败时，错误信息会带上精简片段，便于定位返回格式问题。
+
 ### 6.1 异步任务骨架
 - 新增进程内异步任务队列骨架（ThreadPoolExecutor）。
 - 新增接口：
@@ -151,6 +161,7 @@
 - 写了对拍测试，能稳定发现错误程序的反例。
 - 写了资产自检测试，覆盖编译成功/失败路径。
 - 写了 OpenAI 自动回修测试，覆盖“首次生成失败、第二次修复成功”的路径。
+- 写了 OpenAI SSE 字符串响应兼容测试，覆盖兼容网关返回事件流字符串的路径。
 - 写了配置兼容测试，覆盖 `CODEX_API_KEY` / `.codex/config.toml`。
 - 写了异步 API 测试，覆盖任务提交和轮询完成。
 - 写了队列 backend 测试，覆盖 Celery 不可用时自动回退到 in-process。
