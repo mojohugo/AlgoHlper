@@ -426,9 +426,7 @@ int main() {
           <div className="header">
             <div>
               <h1>算法对拍工作台</h1>
-              <div className="muted">
-                现在按工作流拆成概览 / 编辑 / 生成资产 / 对拍运行四个分区，减少来回切换和误点。
-              </div>
+              <div className="muted">按工作流拆分，减少切换和无关信息干扰。</div>
             </div>
             <div className="headerMeta">
               <StatusBadge label={`API ${API_BASE_URL}`} tone="neutral" />
@@ -505,7 +503,6 @@ int main() {
                     <strong>{project.name}</strong>
                     <StatusBadge label={humanizeStatus(project.status)} tone={getStatusTone(project.status)} />
                   </div>
-                  <div className="muted mono">{project.id}</div>
                   <div className="projectMeta">更新于 {formatTime(project.updated_at)}</div>
                 </button>
               ))}
@@ -540,7 +537,7 @@ int main() {
                 <MetricCard
                   title="当前项目"
                   value={selectedProject?.name ?? "未选择"}
-                  meta={selectedProject?.id ?? "请先在左侧选择项目"}
+                  meta={selectedProject ? `更新于 ${formatTime(selectedProject.updated_at)}` : "请先在左侧选择项目"}
                 />
                 <MetricCard
                   title="项目状态"
@@ -557,18 +554,6 @@ int main() {
                       : "等待任务"
                   }
                   tone={getStatusTone(task?.status)}
-                />
-                <MetricCard
-                  title="生成策略"
-                  value={`${humanizeProvider(provider)} / ${selfTest ? "带自检" : "快速模式"}`}
-                  meta={`回修 ${clampInt(repairRounds, 1, 0, 2)} 轮`}
-                  tone={runtime?.openai.provider_available ? "success" : "warning"}
-                />
-                <MetricCard
-                  title="任务后端"
-                  value={humanizeStatus(runtime?.queue.active_backend ?? "unknown")}
-                  meta={`请求：${humanizeStatus(runtime?.queue.requested_backend ?? "-")}`}
-                  tone={getStatusTone(runtime?.queue.active_backend)}
                 />
                 <MetricCard
                   title="最近对拍"
@@ -592,29 +577,17 @@ int main() {
                 />
               </section>
 
-              <section className="twoCol">
-                <section className="panel stack panelLarge">
-                  <div className="panelHeading">
-                    <div>
-                      <h2>运行环境摘要</h2>
-                      <p className="muted">保留最常用的配置状态，排查环境问题时看这里。</p>
-                    </div>
+              <section className="panel stack panelLarge">
+                <div className="panelHeading">
+                  <div>
+                    <h2>最近对拍结果</h2>
+                    <p className="muted">概览里只保留核心结果，详细操作放到“对拍运行”。</p>
                   </div>
-                  <RuntimePanel runtime={runtime} />
-                </section>
-
-                <section className="panel stack panelLarge">
-                  <div className="panelHeading">
-                    <div>
-                      <h2>最近对拍结果</h2>
-                      <p className="muted">概览里只保留一份结果摘要，完整操作放到“对拍运行”。</p>
-                    </div>
-                  </div>
-                  <DuelResultPanel
-                    result={selectedProject?.last_duel_result ?? null}
-                    onUseFailureInput={fillQuickInputFromFailure}
-                  />
-                </section>
+                </div>
+                <DuelResultPanel
+                  result={selectedProject?.last_duel_result ?? null}
+                  onUseFailureInput={fillQuickInputFromFailure}
+                />
               </section>
             </>
           ) : null}
