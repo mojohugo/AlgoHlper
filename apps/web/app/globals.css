@@ -5,15 +5,47 @@
     "Segoe UI",
     Arial,
     sans-serif;
-  background:
+  --page-background:
     radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 28%),
     radial-gradient(circle at top right, rgba(168, 85, 247, 0.2), transparent 24%),
     linear-gradient(180deg, #07111f 0%, #0b1220 45%, #0f172a 100%);
-  color: #e2e8f0;
+  --page-text: #e2e8f0;
   --bg-panel: rgba(15, 23, 42, 0.78);
   --bg-panel-strong: rgba(15, 23, 42, 0.96);
+  --bg-surface: rgba(2, 6, 23, 0.46);
+  --bg-surface-soft: rgba(2, 6, 23, 0.36);
+  --bg-surface-subtle: rgba(2, 6, 23, 0.22);
+  --bg-card: rgba(15, 23, 42, 0.74);
+  --bg-input: rgba(2, 6, 23, 0.74);
+  --bg-input-focus: rgba(2, 6, 23, 0.92);
+  --bg-pill: rgba(30, 41, 59, 0.88);
+  --pill-text: #cbd5e1;
+  --bg-secondary-button: rgba(51, 65, 85, 0.88);
+  --button-secondary-text: #e2e8f0;
+  --bg-ghost-button: transparent;
+  --button-ghost-text: #e2e8f0;
+  --project-item-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.92));
+  --project-item-active-bg:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.96)),
+    rgba(37, 99, 235, 0.08);
+  --metric-card-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.82));
+  --workspace-tab-bg: rgba(2, 6, 23, 0.46);
+  --workspace-tab-active-bg: rgba(37, 99, 235, 0.16);
+  --tab-button-bg: rgba(2, 6, 23, 0.66);
+  --tab-button-active-bg: rgba(37, 99, 235, 0.18);
+  --editor-surface-bg: rgba(2, 6, 23, 0.72);
+  --editor-surface-border: rgba(30, 41, 59, 0.92);
+  --editor-loading-bg: rgba(2, 6, 23, 0.52);
+  --empty-bg: rgba(2, 6, 23, 0.22);
+  --eyebrow-bg: rgba(255, 255, 255, 0.05);
+  --eyebrow-text: #bfdbfe;
+  --hero-glow: radial-gradient(circle, rgba(59, 130, 246, 0.32), transparent 70%);
+  --panel-shadow: 0 18px 60px rgba(2, 6, 23, 0.34);
+  --panel-inset: rgba(255, 255, 255, 0.04);
   --border: rgba(148, 163, 184, 0.16);
   --border-strong: rgba(148, 163, 184, 0.28);
+  --focus-border: rgba(59, 130, 246, 0.75);
+  --focus-ring: 0 0 0 4px rgba(59, 130, 246, 0.16);
   --text-muted: #94a3b8;
   --text-soft: #cbd5e1;
   --blue: #3b82f6;
@@ -24,6 +56,111 @@
   --amber-soft: rgba(245, 158, 11, 0.14);
   --red: #ef4444;
   --red-soft: rgba(239, 68, 68, 0.14);
+  --tone-neutral-bg: rgba(51, 65, 85, 0.2);
+  --tone-neutral-border: rgba(148, 163, 184, 0.18);
+  --tone-neutral-text: #cbd5e1;
+  --tone-success-bg: var(--green-soft);
+  --tone-success-border: rgba(34, 197, 94, 0.26);
+  --tone-success-text: #bbf7d0;
+  --tone-running-bg: var(--blue-soft);
+  --tone-running-border: rgba(59, 130, 246, 0.3);
+  --tone-running-text: #bfdbfe;
+  --tone-warning-bg: var(--amber-soft);
+  --tone-warning-border: rgba(245, 158, 11, 0.28);
+  --tone-warning-text: #fde68a;
+  --tone-error-bg: var(--red-soft);
+  --tone-error-border: rgba(239, 68, 68, 0.28);
+  --tone-error-text: #fecaca;
+  --banner-error-bg: rgba(127, 29, 29, 0.28);
+  --banner-error-border: rgba(239, 68, 68, 0.24);
+  --banner-error-text: #fecaca;
+  --banner-success-bg: rgba(20, 83, 45, 0.26);
+  --banner-success-border: rgba(34, 197, 94, 0.22);
+  --banner-success-text: #bbf7d0;
+  --banner-warn-bg: rgba(120, 53, 15, 0.2);
+  --banner-warn-border: rgba(245, 158, 11, 0.24);
+  --banner-warn-text: #fde68a;
+  --warning-bg: rgba(120, 53, 15, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.28);
+  --warning-text: #fde68a;
+  --diff-added-bg: rgba(34, 197, 94, 0.12);
+  --diff-removed-bg: rgba(239, 68, 68, 0.12);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page-background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.1), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4ff 44%, #e7edf8 100%);
+  --page-text: #0f172a;
+  --bg-panel: rgba(255, 255, 255, 0.84);
+  --bg-panel-strong: rgba(255, 255, 255, 0.94);
+  --bg-surface: rgba(248, 250, 252, 0.92);
+  --bg-surface-soft: rgba(248, 250, 252, 0.88);
+  --bg-surface-subtle: rgba(248, 250, 252, 0.78);
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-input: rgba(255, 255, 255, 0.94);
+  --bg-input-focus: rgba(255, 255, 255, 1);
+  --bg-pill: rgba(226, 232, 240, 0.9);
+  --pill-text: #334155;
+  --bg-secondary-button: rgba(226, 232, 240, 0.96);
+  --button-secondary-text: #0f172a;
+  --bg-ghost-button: rgba(255, 255, 255, 0.55);
+  --button-ghost-text: #0f172a;
+  --project-item-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
+  --project-item-active-bg: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.96));
+  --metric-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.93));
+  --workspace-tab-bg: rgba(248, 250, 252, 0.92);
+  --workspace-tab-active-bg: rgba(59, 130, 246, 0.12);
+  --tab-button-bg: rgba(248, 250, 252, 0.96);
+  --tab-button-active-bg: rgba(59, 130, 246, 0.12);
+  --editor-surface-bg: #ffffff;
+  --editor-surface-border: rgba(148, 163, 184, 0.38);
+  --editor-loading-bg: rgba(248, 250, 252, 0.9);
+  --empty-bg: rgba(248, 250, 252, 0.78);
+  --eyebrow-bg: rgba(59, 130, 246, 0.1);
+  --eyebrow-text: #1d4ed8;
+  --hero-glow: radial-gradient(circle, rgba(59, 130, 246, 0.18), transparent 70%);
+  --panel-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+  --panel-inset: rgba(255, 255, 255, 0.72);
+  --border: rgba(148, 163, 184, 0.26);
+  --border-strong: rgba(100, 116, 139, 0.34);
+  --text-muted: #64748b;
+  --text-soft: #334155;
+  --blue-soft: rgba(59, 130, 246, 0.1);
+  --green-soft: rgba(34, 197, 94, 0.1);
+  --amber-soft: rgba(245, 158, 11, 0.12);
+  --red-soft: rgba(239, 68, 68, 0.1);
+  --tone-neutral-bg: rgba(226, 232, 240, 0.82);
+  --tone-neutral-border: rgba(148, 163, 184, 0.26);
+  --tone-neutral-text: #334155;
+  --tone-success-bg: rgba(34, 197, 94, 0.12);
+  --tone-success-border: rgba(34, 197, 94, 0.24);
+  --tone-success-text: #166534;
+  --tone-running-bg: rgba(59, 130, 246, 0.12);
+  --tone-running-border: rgba(59, 130, 246, 0.24);
+  --tone-running-text: #1d4ed8;
+  --tone-warning-bg: rgba(245, 158, 11, 0.14);
+  --tone-warning-border: rgba(245, 158, 11, 0.26);
+  --tone-warning-text: #92400e;
+  --tone-error-bg: rgba(239, 68, 68, 0.12);
+  --tone-error-border: rgba(239, 68, 68, 0.24);
+  --tone-error-text: #b91c1c;
+  --banner-error-bg: rgba(254, 226, 226, 0.9);
+  --banner-error-border: rgba(248, 113, 113, 0.35);
+  --banner-error-text: #991b1b;
+  --banner-success-bg: rgba(220, 252, 231, 0.92);
+  --banner-success-border: rgba(74, 222, 128, 0.32);
+  --banner-success-text: #166534;
+  --banner-warn-bg: rgba(254, 243, 199, 0.92);
+  --banner-warn-border: rgba(245, 158, 11, 0.32);
+  --banner-warn-text: #92400e;
+  --warning-bg: rgba(254, 243, 199, 0.62);
+  --warning-border: rgba(245, 158, 11, 0.26);
+  --warning-text: #92400e;
+  --diff-added-bg: rgba(34, 197, 94, 0.08);
+  --diff-removed-bg: rgba(239, 68, 68, 0.08);
 }
 
 * {
@@ -38,6 +175,11 @@ body {
 
 body {
   padding: 28px;
+  background: var(--page-background);
+  color: var(--page-text);
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
 }
 
 button,
@@ -69,7 +211,7 @@ button {
   inset: auto -10% -45% auto;
   width: 360px;
   height: 360px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.32), transparent 70%);
+  background: var(--hero-glow);
   pointer-events: none;
 }
 
@@ -84,9 +226,9 @@ button {
   gap: 8px;
   border-radius: 999px;
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--eyebrow-bg);
   border: 1px solid var(--border);
-  color: #bfdbfe;
+  color: var(--eyebrow-text);
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -143,9 +285,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 18px;
-  box-shadow:
-    0 18px 60px rgba(2, 6, 23, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: var(--panel-shadow), inset 0 1px 0 var(--panel-inset);
   backdrop-filter: blur(16px);
 }
 
@@ -204,7 +344,7 @@ button {
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(2, 6, 23, 0.42);
+  background: var(--bg-surface-soft);
   color: var(--text-soft);
 }
 
@@ -218,8 +358,8 @@ button {
   width: 100%;
   border-radius: 14px;
   border: 1px solid var(--border-strong);
-  background: rgba(2, 6, 23, 0.74);
-  color: #e5e7eb;
+  background: var(--bg-input);
+  color: var(--page-text);
   padding: 12px 14px;
   outline: none;
   transition:
@@ -231,14 +371,19 @@ button {
 .input:focus,
 .textarea:focus,
 .select:focus {
-  border-color: rgba(59, 130, 246, 0.75);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
-  background: rgba(2, 6, 23, 0.92);
+  border-color: var(--focus-border);
+  box-shadow: var(--focus-ring);
+  background: var(--bg-input-focus);
 }
 
 .textarea {
   min-height: 220px;
   resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-muted);
 }
 
 .editorArea {
@@ -262,7 +407,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 14px 16px;
-  background: rgba(2, 6, 23, 0.46);
+  background: var(--workspace-tab-bg);
   color: inherit;
   cursor: pointer;
   transition:
@@ -278,7 +423,7 @@ button {
 
 .workspaceTab.active {
   border-color: rgba(59, 130, 246, 0.72);
-  background: rgba(37, 99, 235, 0.16);
+  background: var(--workspace-tab-active-bg);
 }
 
 .workspaceTabLabel {
@@ -305,7 +450,7 @@ button {
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: rgba(2, 6, 23, 0.36);
+  background: var(--bg-surface-soft);
 }
 
 .button {
@@ -328,13 +473,15 @@ button {
 }
 
 .button.secondary {
-  background: rgba(51, 65, 85, 0.88);
+  background: var(--bg-secondary-button);
+  color: var(--button-secondary-text);
   box-shadow: none;
 }
 
 .button.ghost {
-  background: transparent;
+  background: var(--bg-ghost-button);
   border: 1px solid var(--border-strong);
+  color: var(--button-ghost-text);
   box-shadow: none;
 }
 
@@ -359,8 +506,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 14px;
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.92));
+  background: var(--project-item-bg);
   cursor: pointer;
   text-align: left;
   color: inherit;
@@ -377,9 +523,7 @@ button {
 
 .projectItem.active {
   border-color: rgba(59, 130, 246, 0.8);
-  background:
-    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.96)),
-    rgba(37, 99, 235, 0.08);
+  background: var(--project-item-active-bg);
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 
@@ -407,8 +551,7 @@ button {
   border-radius: 20px;
   padding: 16px;
   border: 1px solid var(--border);
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.82));
+  background: var(--metric-card-bg);
   min-height: 130px;
   display: grid;
   align-content: space-between;
@@ -452,7 +595,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  background: rgba(2, 6, 23, 0.32);
+  background: var(--bg-surface-soft);
   display: grid;
   gap: 12px;
 }
@@ -479,8 +622,8 @@ button {
 .editorSurface {
   overflow: hidden;
   border-radius: 16px;
-  border: 1px solid rgba(30, 41, 59, 0.92);
-  background: rgba(2, 6, 23, 0.72);
+  border: 1px solid var(--editor-surface-border);
+  background: var(--editor-surface-bg);
 }
 
 .editorLoading {
@@ -489,7 +632,7 @@ button {
   place-items: center;
   color: var(--text-muted);
   font-size: 13px;
-  background: rgba(2, 6, 23, 0.52);
+  background: var(--editor-loading-bg);
 }
 
 .code,
@@ -497,8 +640,8 @@ button {
   font-family: Consolas, "Courier New", monospace;
   white-space: pre-wrap;
   word-break: break-word;
-  background: rgba(2, 6, 23, 0.72);
-  border: 1px solid rgba(30, 41, 59, 0.92);
+  background: var(--editor-surface-bg);
+  border: 1px solid var(--editor-surface-border);
   border-radius: 16px;
   padding: 14px;
 }
@@ -533,8 +676,8 @@ button {
   max-width: 100%;
   border-radius: 999px;
   padding: 6px 10px;
-  background: rgba(30, 41, 59, 0.88);
-  color: #cbd5e1;
+  background: var(--bg-pill);
+  color: var(--pill-text);
   font-size: 12px;
   text-align: center;
   white-space: normal;
@@ -542,41 +685,41 @@ button {
 }
 
 .tone-neutral {
-  background: rgba(51, 65, 85, 0.2);
-  border-color: rgba(148, 163, 184, 0.18);
-  color: #cbd5e1;
+  background: var(--tone-neutral-bg);
+  border-color: var(--tone-neutral-border);
+  color: var(--tone-neutral-text);
 }
 
 .statusBadge.tone-success,
 .metricCard.tone-success {
-  background: var(--green-soft);
-  border-color: rgba(34, 197, 94, 0.26);
-  color: #bbf7d0;
+  background: var(--tone-success-bg);
+  border-color: var(--tone-success-border);
+  color: var(--tone-success-text);
 }
 
 .statusBadge.tone-running,
 .metricCard.tone-running {
-  background: var(--blue-soft);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #bfdbfe;
+  background: var(--tone-running-bg);
+  border-color: var(--tone-running-border);
+  color: var(--tone-running-text);
 }
 
 .statusBadge.tone-warning,
 .metricCard.tone-warning {
-  background: var(--amber-soft);
-  border-color: rgba(245, 158, 11, 0.28);
-  color: #fde68a;
+  background: var(--tone-warning-bg);
+  border-color: var(--tone-warning-border);
+  color: var(--tone-warning-text);
 }
 
 .statusBadge.tone-error,
 .metricCard.tone-error {
-  background: var(--red-soft);
-  border-color: rgba(239, 68, 68, 0.28);
-  color: #fecaca;
+  background: var(--tone-error-bg);
+  border-color: var(--tone-error-border);
+  color: var(--tone-error-text);
 }
 
 .card {
-  background: rgba(15, 23, 42, 0.74);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 14px;
@@ -592,7 +735,7 @@ button {
   border-radius: 14px;
   border: 1px solid var(--border);
   padding: 10px 12px;
-  background: rgba(2, 6, 23, 0.42);
+  background: var(--bg-surface-soft);
 }
 
 .infoLabel {
@@ -639,14 +782,14 @@ button {
   padding: 12px;
   border-radius: 16px;
   border: 1px solid var(--border);
-  background: rgba(2, 6, 23, 0.22);
+  background: var(--bg-surface-subtle);
 }
 
 .subtleCard {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
-  background: rgba(2, 6, 23, 0.3);
+  background: var(--bg-surface-soft);
 }
 
 .textareaCompact {
@@ -666,8 +809,8 @@ button {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 9px 14px;
-  background: rgba(2, 6, 23, 0.66);
-  color: #e5e7eb;
+  background: var(--tab-button-bg);
+  color: var(--page-text);
   cursor: pointer;
   transition:
     background 0.2s ease,
@@ -681,7 +824,7 @@ button {
 
 .tabButton.active {
   border-color: rgba(59, 130, 246, 0.72);
-  background: rgba(37, 99, 235, 0.18);
+  background: var(--tab-button-active-bg);
 }
 
 .banner {
@@ -696,28 +839,29 @@ button {
 }
 
 .bannerError {
-  background: rgba(127, 29, 29, 0.28);
-  border-color: rgba(239, 68, 68, 0.24);
-  color: #fecaca;
+  background: var(--banner-error-bg);
+  border-color: var(--banner-error-border);
+  color: var(--banner-error-text);
 }
 
 .bannerSuccess {
-  background: rgba(20, 83, 45, 0.26);
-  border-color: rgba(34, 197, 94, 0.22);
-  color: #bbf7d0;
+  background: var(--banner-success-bg);
+  border-color: var(--banner-success-border);
+  color: var(--banner-success-text);
 }
 
 .bannerWarn {
-  background: rgba(120, 53, 15, 0.2);
-  border-color: rgba(245, 158, 11, 0.24);
-  color: #fde68a;
+  background: var(--banner-warn-bg);
+  border-color: var(--banner-warn-border);
+  color: var(--banner-warn-text);
 }
 
 .warningList {
   padding: 10px 12px;
-  border: 1px dashed rgba(245, 158, 11, 0.28);
+  border: 1px dashed var(--warning-border);
   border-radius: 16px;
-  background: rgba(120, 53, 15, 0.12);
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .logList {
@@ -733,7 +877,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px 14px;
-  background: rgba(2, 6, 23, 0.36);
+  background: var(--bg-surface-soft);
 }
 
 .logDot {
@@ -760,7 +904,7 @@ button {
   border-radius: 18px;
   padding: 18px;
   color: var(--text-muted);
-  background: rgba(2, 6, 23, 0.22);
+  background: var(--empty-bg);
 }
 
 .diffGrid {
@@ -790,11 +934,11 @@ button {
 }
 
 .diffLine.added {
-  background: rgba(34, 197, 94, 0.12);
+  background: var(--diff-added-bg);
 }
 
 .diffLine.removed {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--diff-removed-bg);
 }
 
 .lineNo {
@@ -803,11 +947,11 @@ button {
 }
 
 .error {
-  color: #fecaca;
+  color: var(--tone-error-text);
 }
 
 .success {
-  color: #bbf7d0;
+  color: var(--tone-success-text);
 }
 
 @media (max-width: 1280px) {

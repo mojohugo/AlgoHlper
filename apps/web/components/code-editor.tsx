@@ -13,6 +13,7 @@ type CodeEditorProps = {
   onChange?: (value: string) => void;
   readOnly?: boolean;
   height?: number;
+  theme?: "light" | "dark";
 };
 
 export function CodeEditor({
@@ -21,12 +22,13 @@ export function CodeEditor({
   onChange,
   readOnly = false,
   height = 420,
+  theme = "dark",
 }: CodeEditorProps) {
   return (
     <div className="editorSurface" style={{ height }}>
       <MonacoEditor
         language={language}
-        theme="vs-dark"
+        theme={theme === "light" ? "vs-light" : "vs-dark"}
         value={value}
         onChange={(nextValue) => onChange?.(nextValue ?? "")}
         options={{

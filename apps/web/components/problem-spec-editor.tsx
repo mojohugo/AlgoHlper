@@ -25,8 +25,8 @@ type ProblemSpecEditorProps = {
   busy: boolean;
   disabled: boolean;
   onChange: (nextValue: ProblemSpec) => void;
-  onSave: () => void;
   onReset: () => void;
+  editorTheme?: "light" | "dark";
 };
 
 export function ProblemSpecEditor({
@@ -34,8 +34,8 @@ export function ProblemSpecEditor({
   busy,
   disabled,
   onChange,
-  onSave,
   onReset,
+  editorTheme = "dark",
 }: ProblemSpecEditorProps) {
   const constraintEntries = Object.entries(value.constraints);
   const confidenceEntries = Object.entries(value.parse_confidence);
@@ -99,14 +99,6 @@ export function ProblemSpecEditor({
           disabled={busy || disabled}
         >
           重置
-        </button>
-        <button
-          type="button"
-          className="button buttonSmall"
-          onClick={onSave}
-          disabled={busy || disabled}
-        >
-          保存结构化题面
         </button>
       </div>
 
@@ -315,6 +307,7 @@ export function ProblemSpecEditor({
           language="json"
           readOnly
           height={260}
+          theme={editorTheme}
         />
       </section>
     </div>

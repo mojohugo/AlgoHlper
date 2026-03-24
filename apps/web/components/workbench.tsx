@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CodeEditor } from "./code-editor";
 import { CopyButton } from "./copy-button";
@@ -116,9 +116,51 @@ type QuickRunResult = {
 };
 
 type WorkspaceTab = "overview" | "edit" | "assets" | "run";
+type ThemeMode = "light" | "dark";
+type AutoSaveState = "idle" | "saving" | "saved" | "error";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
+
+const DEFAULT_PROJECT_NAME = "示例项目";
+const DEFAULT_PROBLEM_TEXT = [
+  "# A + B Problem",
+  "",
+  "题目描述",
+  "给定两个整数，输出它们的和。",
+  "",
+  "输入格式",
+  "```text",
+  "a b",
+  "```",
+  "",
+  "输出格式",
+  "```text",
+  "输出一个整数",
+  "```",
+  "",
+  "样例输入",
+  "```text",
+  "1 2",
+  "```",
+  "",
+  "样例输出",
+  "```text",
+  "3",
+  "```",
+  "",
+].join("\n");
+const DEFAULT_USER_CODE = `#include <bits/stdc++.h>
+using namespace std;
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    long long a, b;
+    if (!(cin >> a >> b)) return 0;
+    cout << a + b << "\n";
+    return 0;
+}
+`;
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -143,44 +185,10 @@ export function Workbench() {
   const [task, setTask] = useState<TaskRecord | null>(null);
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("edit");
   const [activeArtifact, setActiveArtifact] = useState("brute");
-  const [projectName, setProjectName] = useState("示例项目");
+  const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
   const [specDraft, setSpecDraft] = useState<ProblemSpec>(emptyProblemSpec());
-  const [problemText, setProblemText] = useState(`# A + B Problem
-
-题目描述
-给定两个整数，输出它们的和。
-
-输入格式
-\`\`\`text
-a b
-\`\`\`
-
-输出格式
-\`\`\`text
-输出一个整数
-\`\`\`
-
-样例输入
-\`\`\`text
-1 2
-\`\`\`
-
-样例输出
-\`\`\`text
-3
-\`\`\`
-`);
-  const [userCode, setUserCode] = useState(`#include <bits/stdc++.h>
-using namespace std;
-int main() {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-    long long a, b;
-    if (!(cin >> a >> b)) return 0;
-    cout << a + b << "\\n";
-    return 0;
-}
-`);
+  const [problemText, setProblemText] = useState(DEFAULT_PROBLEM_TEXT);
+  const [userCode, setUserCode] = useState(DEFAULT_USER_CODE);
   const [provider, setProvider] = useState("auto");
   const [selfTest, setSelfTest] = useState(true);
   const [repairRounds, setRepairRounds] = useState("1");
@@ -190,11 +198,20 @@ int main() {
   const [quickRunResult, setQuickRunResult] = useState<QuickRunResult | null>(null);
   const [error, setError] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [problemSaveState, setProblemSaveState] = useState<AutoSaveState>("idle");
+  const [userSaveState, setUserSaveState] = useState<AutoSaveState>("idle");
+  const [specSaveState, setSpecSaveState] = useState<AutoSaveState>("idle");
+  const lastSyncedProblemRef = useRef(problemText);
+  const lastSyncedUserCodeRef = useRef(userCode);
+  const lastSyncedSpecRef = useRef(JSON.stringify(specDraft));
+  const hydratedProjectIdRef = useRef("");
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
     [projects, selectedProjectId],
   );
+  const specDraftKey = useMemo(() => JSON.stringify(specDraft), [specDraft]);
 
   useEffect(() => {
     void runBusy(async () => {
@@ -203,22 +220,134 @@ int main() {
   }, []);
 
   useEffect(() => {
-    if (!selectedProjectId) {
+    try {
+      const savedTheme = window.localStorage.getItem("algohlper-theme");
+      if (savedTheme === "light" || savedTheme === "dark") {
+        setTheme(savedTheme);
+        return;
+      }
+      if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+        setTheme("light");
+      }
+    } catch {
+      // ignore theme init failures
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem("algohlper-theme", theme);
+    } catch {
+      // ignore theme persistence failures
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (!selectedProjectId || !selectedProject) {
       return;
     }
-    const selected = projects.find((project) => project.id === selectedProjectId);
-    if (!selected) {
+    const nextProblem = selectedProject.raw_problem_content ?? "";
+    const nextUserCode = selectedProject.artifacts.user_solution?.code ?? DEFAULT_USER_CODE;
+    const nextSpecDraft = cloneProblemSpec(selectedProject.problem_spec);
+    const nextSpecKey = JSON.stringify(nextSpecDraft);
+    const projectChanged = hydratedProjectIdRef.current !== selectedProjectId;
+    const hasLocalUnsavedChanges =
+      problemText !== lastSyncedProblemRef.current ||
+      userCode !== lastSyncedUserCodeRef.current ||
+      specDraftKey !== lastSyncedSpecRef.current;
+
+    if (!projectChanged && hasLocalUnsavedChanges) {
       return;
     }
-    setProblemText(selected.raw_problem_content ?? "");
-    setUserCode(selected.artifacts.user_solution?.code ?? userCode);
-    setSpecDraft(cloneProblemSpec(selected.problem_spec));
-    setQuickRunResult(null);
-    const nextActiveArtifact = pickDefaultArtifact(selected.artifacts, activeArtifact);
+
+    hydratedProjectIdRef.current = selectedProjectId;
+    setProblemText(nextProblem);
+    setUserCode(nextUserCode);
+    setSpecDraft(nextSpecDraft);
+    lastSyncedProblemRef.current = nextProblem;
+    lastSyncedUserCodeRef.current = nextUserCode;
+    lastSyncedSpecRef.current = nextSpecKey;
+    setProblemSaveState("idle");
+    setUserSaveState("idle");
+    setSpecSaveState("idle");
+
+    if (projectChanged) {
+      setQuickRunResult(null);
+    }
+
+    const nextActiveArtifact = pickDefaultArtifact(selectedProject.artifacts, activeArtifact);
     if (nextActiveArtifact !== activeArtifact) {
       setActiveArtifact(nextActiveArtifact);
     }
-  }, [selectedProjectId, projects]);
+  }, [selectedProjectId, selectedProject, problemText, userCode, specDraftKey, activeArtifact]);
+
+  useEffect(() => {
+    if (!selectedProjectId || problemText === lastSyncedProblemRef.current) {
+      return;
+    }
+    setProblemSaveState("saving");
+    const currentProjectId = selectedProjectId;
+    const currentProblemText = problemText;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        if (currentProblemText === lastSyncedProblemRef.current) {
+          return;
+        }
+        try {
+          await persistProblem(currentProjectId, currentProblemText);
+        } catch {
+          // error handled in persistProblem
+        }
+      })();
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [problemText, selectedProjectId]);
+
+  useEffect(() => {
+    if (!selectedProjectId || userCode === lastSyncedUserCodeRef.current) {
+      return;
+    }
+    setUserSaveState("saving");
+    const currentProjectId = selectedProjectId;
+    const currentUserCode = userCode;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        if (currentUserCode === lastSyncedUserCodeRef.current) {
+          return;
+        }
+        try {
+          await persistUserSolution(currentProjectId, currentUserCode);
+        } catch {
+          // error handled in persistUserSolution
+        }
+      })();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [userCode, selectedProjectId]);
+
+  useEffect(() => {
+    if (!selectedProjectId || specDraftKey === lastSyncedSpecRef.current) {
+      return;
+    }
+    setSpecSaveState("saving");
+    const currentProjectId = selectedProjectId;
+    const currentSpecDraft = cloneProblemSpec(specDraft);
+    const currentSpecKey = specDraftKey;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        if (currentSpecKey === lastSyncedSpecRef.current) {
+          return;
+        }
+        try {
+          await persistProblemSpec(currentProjectId, currentSpecDraft);
+        } catch {
+          // error handled in persistProblemSpec
+        }
+      })();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [selectedProjectId, specDraft, specDraftKey]);
 
   useEffect(() => {
     if (!task || !["queued", "running"].includes(task.status)) {
@@ -258,6 +387,18 @@ int main() {
     await Promise.all([refreshProjects(preferredProjectId), refreshRuntime()]);
   }
 
+  function mergeProject(nextProject: ProjectRecord) {
+    setProjects((currentProjects) => {
+      const existingIndex = currentProjects.findIndex((project) => project.id === nextProject.id);
+      if (existingIndex < 0) {
+        return [nextProject, ...currentProjects];
+      }
+      const nextProjects = [...currentProjects];
+      nextProjects[existingIndex] = nextProject;
+      return nextProjects;
+    });
+  }
+
   async function createProject() {
     await runBusy(async () => {
       const project = await apiFetch<ProjectRecord>("/api/projects", {
@@ -269,50 +410,80 @@ int main() {
     });
   }
 
-  async function saveProblem() {
-    if (!selectedProjectId) {
-      setError("先创建或选择一个项目。");
-      return;
-    }
-    await runBusy(async () => {
-      await apiFetch<ProjectRecord>(`/api/projects/${selectedProjectId}/problem-text`, {
+  async function persistProblem(projectId: string, content: string) {
+    try {
+      const project = await apiFetch<ProjectRecord>(`/api/projects/${projectId}/problem-text`, {
         method: "POST",
-        body: JSON.stringify({ content: problemText, format: "markdown" }),
+        body: JSON.stringify({ content, format: "markdown" }),
       });
-      await refreshProjects(selectedProjectId);
-    });
+      lastSyncedProblemRef.current = content;
+      setProblemSaveState("saved");
+      mergeProject(project);
+    } catch (saveError) {
+      setProblemSaveState("error");
+      setError(`自动保存题面失败：${asErrorMessage(saveError)}`);
+      throw saveError;
+    }
   }
 
-  async function saveUserSolution() {
-    if (!selectedProjectId) {
-      setError("先创建或选择一个项目。");
-      return;
-    }
-    await runBusy(async () => {
-      await apiFetch<ProjectRecord>(`/api/projects/${selectedProjectId}/artifacts`, {
+  async function persistUserSolution(projectId: string, code: string) {
+    try {
+      const project = await apiFetch<ProjectRecord>(`/api/projects/${projectId}/artifacts`, {
         method: "POST",
         body: JSON.stringify({
           type: "user_solution",
           language: "cpp",
-          code: userCode,
+          code,
         }),
       });
-      await refreshProjects(selectedProjectId);
-    });
+      lastSyncedUserCodeRef.current = code;
+      setUserSaveState("saved");
+      mergeProject(project);
+    } catch (saveError) {
+      setUserSaveState("error");
+      setError(`自动保存用户代码失败：${asErrorMessage(saveError)}`);
+      throw saveError;
+    }
   }
 
-  async function saveProblemSpec() {
-    if (!selectedProjectId) {
-      setError("先创建或选择一个项目。");
+  async function persistProblemSpec(projectId: string, nextSpecDraft: ProblemSpec) {
+    try {
+      const project = await apiFetch<ProjectRecord>(`/api/projects/${projectId}/problem-spec`, {
+        method: "PUT",
+        body: JSON.stringify(nextSpecDraft),
+      });
+      lastSyncedSpecRef.current = JSON.stringify(nextSpecDraft);
+      setSpecSaveState("saved");
+      mergeProject(project);
+    } catch (saveError) {
+      setSpecSaveState("error");
+      setError(`自动保存结构化题面失败：${asErrorMessage(saveError)}`);
+      throw saveError;
+    }
+  }
+
+  async function flushProblemIfNeeded() {
+    if (!selectedProjectId || problemText === lastSyncedProblemRef.current) {
       return;
     }
-    await runBusy(async () => {
-      await apiFetch<ProjectRecord>(`/api/projects/${selectedProjectId}/problem-spec`, {
-        method: "PUT",
-        body: JSON.stringify(specDraft),
-      });
-      await refreshProjects(selectedProjectId);
-    });
+    setProblemSaveState("saving");
+    await persistProblem(selectedProjectId, problemText);
+  }
+
+  async function flushUserSolutionIfNeeded() {
+    if (!selectedProjectId || userCode === lastSyncedUserCodeRef.current) {
+      return;
+    }
+    setUserSaveState("saving");
+    await persistUserSolution(selectedProjectId, userCode);
+  }
+
+  async function flushProblemSpecIfNeeded() {
+    if (!selectedProjectId || specDraftKey === lastSyncedSpecRef.current) {
+      return;
+    }
+    setSpecSaveState("saving");
+    await persistProblemSpec(selectedProjectId, cloneProblemSpec(specDraft));
   }
 
   async function startParse() {
@@ -321,6 +492,7 @@ int main() {
       return;
     }
     await runBusy(async () => {
+      await flushProblemIfNeeded();
       const response = await apiFetch<{ task: TaskRecord }>(
         `/api/projects/${selectedProjectId}/parse-async`,
         { method: "POST" },
@@ -336,6 +508,7 @@ int main() {
       return;
     }
     await runBusy(async () => {
+      await Promise.all([flushProblemIfNeeded(), flushProblemSpecIfNeeded()]);
       const response = await apiFetch<{ task: TaskRecord }>(
         `/api/projects/${selectedProjectId}/generate-artifacts-async`,
         {
@@ -358,6 +531,7 @@ int main() {
       return;
     }
     await runBusy(async () => {
+      await flushUserSolutionIfNeeded();
       const response = await apiFetch<{ task: TaskRecord }>(
         `/api/projects/${selectedProjectId}/duel-async`,
         {
@@ -429,6 +603,13 @@ int main() {
               <div className="muted">按工作流拆分，减少切换和无关信息干扰。</div>
             </div>
             <div className="headerMeta">
+              <button
+                type="button"
+                className="button secondary buttonSmall"
+                onClick={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))}
+              >
+                {theme === "dark" ? "切换浅色" : "切换深色"}
+              </button>
               <StatusBadge label={`API ${API_BASE_URL}`} tone="neutral" />
               <StatusBadge
                 label={runtime?.openai.provider_available ? "OpenAI 已就绪" : "OpenAI 未就绪"}
@@ -587,6 +768,7 @@ int main() {
                 <DuelResultPanel
                   result={selectedProject?.last_duel_result ?? null}
                   onUseFailureInput={fillQuickInputFromFailure}
+                  theme={theme}
                 />
               </section>
             </>
@@ -599,35 +781,31 @@ int main() {
                   <div className="panelHeading">
                     <div>
                       <h2>题面编辑</h2>
-                      <p className="muted">只放题面相关按钮，保存和解析都在这里。</p>
+                      <p className="muted">题面会自动保存；解析入口保留在这里。</p>
                     </div>
                     <div className="editorActions">
+                      <AutoSaveIndicator state={problemSaveState} />
                       <CopyButton text={problemText} label="复制题面" />
                       <button className="button secondary" onClick={() => void startParse()} disabled={busy || !selectedProjectId}>
                         解析题面
                       </button>
-                      <button className="button" onClick={() => void saveProblem()} disabled={busy || !selectedProjectId}>
-                        保存题面
-                      </button>
                     </div>
                   </div>
-                  <CodeEditor value={problemText} language="markdown" onChange={setProblemText} height={520} />
+                  <CodeEditor value={problemText} language="markdown" onChange={setProblemText} height={520} theme={theme} />
                 </section>
 
                 <section className="panel stack panelLarge">
                   <div className="panelHeading">
                     <div>
                       <h2>用户代码</h2>
-                      <p className="muted">当前编辑器里的代码就是保存和快速运行的来源。</p>
+                      <p className="muted">当前编辑器里的代码会自动保存，并直接用于快速运行。</p>
                     </div>
                     <div className="editorActions">
+                      <AutoSaveIndicator state={userSaveState} />
                       <CopyButton text={userCode} label="复制代码" />
-                      <button className="button" onClick={() => void saveUserSolution()} disabled={busy || !selectedProjectId}>
-                        保存用户代码
-                      </button>
                     </div>
                   </div>
-                  <CodeEditor value={userCode} language="cpp" onChange={setUserCode} height={520} />
+                  <CodeEditor value={userCode} language="cpp" onChange={setUserCode} height={520} theme={theme} />
                 </section>
               </section>
 
@@ -666,6 +844,7 @@ int main() {
                   input={quickInput}
                   onInputChange={setQuickInput}
                   result={quickRunResult}
+                  theme={theme}
                 />
               </section>
             </>
@@ -733,6 +912,7 @@ int main() {
                   project={selectedProject}
                   activeArtifact={activeArtifact}
                   onChange={setActiveArtifact}
+                  theme={theme}
                 />
               </section>
 
@@ -740,11 +920,14 @@ int main() {
                 <div className="panelHeading">
                   <div>
                     <h2>结构化题面编辑</h2>
-                    <p className="muted">结构化题面和生成资产属于同一个阶段，所以放在一起。</p>
+                    <p className="muted">结构化题面会自动保存；这里保留重置和预览。</p>
                   </div>
-                  {selectedProject ? (
-                    <StatusBadge label={humanizeStatus(selectedProject.status)} tone={getStatusTone(selectedProject.status)} />
-                  ) : null}
+                  <div className="metaRow">
+                    <AutoSaveIndicator state={specSaveState} />
+                    {selectedProject ? (
+                      <StatusBadge label={humanizeStatus(selectedProject.status)} tone={getStatusTone(selectedProject.status)} />
+                    ) : null}
+                  </div>
                 </div>
                 {selectedProject ? (
                   <ProblemSpecEditor
@@ -752,8 +935,8 @@ int main() {
                     busy={busy}
                     disabled={!selectedProjectId}
                     onChange={setSpecDraft}
-                    onSave={() => void saveProblemSpec()}
                     onReset={() => setSpecDraft(cloneProblemSpec(selectedProject.problem_spec))}
+                    editorTheme={theme}
                   />
                 ) : (
                   <div className="emptyState">请选择项目。</div>
@@ -826,6 +1009,7 @@ int main() {
                 <DuelResultPanel
                   result={selectedProject?.last_duel_result ?? null}
                   onUseFailureInput={fillQuickInputFromFailure}
+                  theme={theme}
                 />
               </section>
             </>
@@ -919,6 +1103,19 @@ function WorkspaceTabs({
       ))}
     </section>
   );
+}
+
+function AutoSaveIndicator({ state }: { state: AutoSaveState }) {
+  switch (state) {
+    case "saving":
+      return <StatusBadge label="自动保存中" tone="running" />;
+    case "saved":
+      return <StatusBadge label="已自动保存" tone="success" />;
+    case "error":
+      return <StatusBadge label="自动保存失败" tone="error" />;
+    default:
+      return <StatusBadge label="自动保存" tone="neutral" />;
+  }
 }
 
 function TaskPanel({ task }: { task: TaskRecord | null }) {
@@ -1039,10 +1236,12 @@ function ArtifactTabs({
   project,
   activeArtifact,
   onChange,
+  theme,
 }: {
   project: ProjectRecord | null;
   activeArtifact: string;
   onChange: (artifactName: string) => void;
+  theme: ThemeMode;
 }) {
   const artifactEntries = getArtifactEntries(project?.artifacts ?? {});
   const artifact = project?.artifacts?.[activeArtifact];
@@ -1074,6 +1273,7 @@ function ArtifactTabs({
             language={toEditorLanguage(artifact.language, artifact.type)}
             readOnly
             height={420}
+            theme={theme}
           />
         </div>
       ) : (
@@ -1087,10 +1287,12 @@ function QuickRunPanel({
   input,
   onInputChange,
   result,
+  theme,
 }: {
   input: string;
   onInputChange: (value: string) => void;
   result: QuickRunResult | null;
+  theme: ThemeMode;
 }) {
   return (
     <div className="stack">
@@ -1103,7 +1305,7 @@ function QuickRunPanel({
           <CopyButton text={input} label="复制输入" />
         </div>
       </div>
-      <CodeEditor value={input} language="plaintext" onChange={onInputChange} height={180} />
+      <CodeEditor value={input} language="plaintext" onChange={onInputChange} height={180} theme={theme} />
 
       {result ? (
         <div className="stack">
@@ -1130,6 +1332,7 @@ function QuickRunPanel({
                 language="plaintext"
                 readOnly
                 height={180}
+                theme={theme}
               />
             </section>
             <section className="stack">
@@ -1142,6 +1345,7 @@ function QuickRunPanel({
                 language="plaintext"
                 readOnly
                 height={180}
+                theme={theme}
               />
             </section>
           </div>
@@ -1156,6 +1360,7 @@ function QuickRunPanel({
               language="plaintext"
               readOnly
               height={160}
+              theme={theme}
             />
           </section>
         </div>
@@ -1169,9 +1374,11 @@ function QuickRunPanel({
 function DuelResultPanel({
   result,
   onUseFailureInput,
+  theme,
 }: {
   result: DuelResult | null;
   onUseFailureInput?: () => void;
+  theme: ThemeMode;
 }) {
   if (!result) {
     return <div className="muted">还没有对拍结果</div>;
@@ -1214,7 +1421,7 @@ function DuelResultPanel({
                   <div className="pill">标准错误</div>
                   <CopyButton text={failure.stderr} label="复制标准错误" />
                 </div>
-                <CodeEditor value={failure.stderr} language="plaintext" readOnly height={160} />
+                <CodeEditor value={failure.stderr} language="plaintext" readOnly height={160} theme={theme} />
               </div>
             ) : null}
           </div>
@@ -1230,7 +1437,7 @@ function DuelResultPanel({
                 ) : null}
               </div>
             </div>
-            <CodeEditor value={failure.input || "(空)"} language="plaintext" readOnly height={180} />
+            <CodeEditor value={failure.input || "(空)"} language="plaintext" readOnly height={180} theme={theme} />
           </div>
           <DiffViewer expected={failure.expected_output} actual={failure.actual_output} />
           {Object.keys(result.compile_logs).length > 0 ? (
@@ -1242,7 +1449,7 @@ function DuelResultPanel({
                     <div className="pill">{humanizeArtifactName(name)}</div>
                     <CopyButton text={log || ""} label="复制日志" />
                   </div>
-                  <CodeEditor value={log || "(空)"} language="plaintext" readOnly height={180} />
+                  <CodeEditor value={log || "(空)"} language="plaintext" readOnly height={180} theme={theme} />
                 </div>
               ))}
             </div>
