@@ -1,0 +1,42 @@
+{
+  "id": "tsk_85dcf5484bde",
+  "project_id": "prj_81737b101199",
+  "type": "parse",
+  "status": "completed",
+  "progress": 100,
+  "current_stage": "completed",
+  "logs": [
+    {
+      "time": "2026-03-25T08:22:36.935892Z",
+      "level": "info",
+      "message": "开始标准化题面"
+    },
+    {
+      "time": "2026-03-25T08:22:36.943737Z",
+      "level": "info",
+      "message": "规则解析完成"
+    }
+  ],
+  "result": {
+    "problem_spec": {
+      "title": "Demo",
+      "statement": "????\n???????",
+      "input_format": "",
+      "output_format": "",
+      "constraints": {},
+      "samples": [],
+      "problem_type_guess": [],
+      "special_notes": [],
+      "parse_confidence": {
+        "title": 0.9,
+        "input_format": 0.25,
+        "output_format": 0.25,
+        "constraints": 0.25,
+        "samples": 0.3
+      }
+    }
+  },
+  "error": null,
+  "started_at": "2026-03-25T08:22:36.918626Z",
+  "finished_at": "2026-03-25T08:22:36.950666Z"
+}

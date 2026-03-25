@@ -83,7 +83,13 @@ celery -A algohlper.worker.tasks.celery_app worker --loglevel=info --pool=solo
 
 ```powershell
 .\scripts\start_worker.ps1 -RedisPassword 123456
-.\scripts\start_api.ps1 -RedisPassword 123456
+.\scripts\start_api.ps1 -Backend celery -RedisPassword 123456
+```
+
+如果只是本地先跑通前后端、不启用 Redis / Celery，API 脚本默认就是进程内队列：
+
+```powershell
+.\scripts\start_api.ps1
 ```
 
 说明：

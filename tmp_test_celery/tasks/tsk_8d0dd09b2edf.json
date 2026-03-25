@@ -1,0 +1,13 @@
+{
+  "id": "tsk_8d0dd09b2edf",
+  "project_id": "prj_c767038762b5",
+  "type": "parse",
+  "status": "queued",
+  "progress": 0,
+  "current_stage": "queued",
+  "logs": [],
+  "result": null,
+  "error": null,
+  "started_at": "2026-03-25T08:23:14.487294Z",
+  "finished_at": null
+}

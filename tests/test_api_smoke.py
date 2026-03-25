@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from algohlper.api.app import create_app
 from algohlper.config import Settings
+from algohlper.worker import celery_app as celery_app_module
 
 
 def test_api_parse_and_generate_starter_artifacts(tmp_path) -> None:
@@ -131,6 +132,52 @@ n
         if task["status"] in {"completed", "failed"}:
             break
         time.sleep(0.1)
+    assert task["status"] == "completed"
+
+
+def test_api_async_parse_falls_back_when_celery_submit_fails(monkeypatch, tmp_path) -> None:
+    class BrokenCeleryApp:
+        def send_task(self, *_args, **_kwargs):
+            raise RuntimeError("broker unavailable")
+
+    monkeypatch.setattr(celery_app_module, "create_celery_app", lambda _settings: BrokenCeleryApp())
+
+    app = create_app(Settings(data_dir=tmp_path, cxx="g++", task_queue_backend="celery"))
+    client = TestClient(app)
+
+    project = client.post("/api/projects", json={"name": "demo-celery-fallback"}).json()
+    project_id = project["id"]
+    problem = """# Async Parse Problem
+
+题目描述
+给定一个整数 n，输出 n。
+
+输入格式
+```text
+n
+```
+
+输出格式
+```text
+n
+```
+"""
+    client.post(
+        f"/api/projects/{project_id}/problem-text",
+        json={"content": problem, "format": "markdown"},
+    )
+
+    response = client.post(f"/api/projects/{project_id}/parse-async")
+    assert response.status_code == 200
+    task_id = response.json()["task"]["id"]
+
+    for _ in range(30):
+        task_response = client.get(f"/api/tasks/{task_id}")
+        task = task_response.json()
+        if task["status"] in {"completed", "failed"}:
+            break
+        time.sleep(0.1)
+
     assert task["status"] == "completed"
 
 

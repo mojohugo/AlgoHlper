@@ -58,33 +58,56 @@ class InProcessTaskQueue:
 class CeleryTaskQueue:
     backend_name = "celery"
 
-    def __init__(self, celery_app):
+    def __init__(self, celery_app, fallback_queue: TaskQueue | None = None):
         self.celery_app = celery_app
+        self.fallback_queue = fallback_queue
+
+    def _send_task_with_fallback(self, *, task_name: str, kwargs: dict, fallback_submit) -> None:
+        try:
+            self.celery_app.send_task(task_name, kwargs=kwargs)
+        except Exception:
+            if self.fallback_queue is None:
+                raise
+            fallback_submit()
 
     def submit_parse(self, *, project_id: str, task_id: str) -> None:
-        self.celery_app.send_task(
-            "algohlper.parse_project",
+        self._send_task_with_fallback(
+            task_name="algohlper.parse_project",
             kwargs={"project_id": project_id, "task_id": task_id},
+            fallback_submit=lambda: self.fallback_queue.submit_parse(
+                project_id=project_id,
+                task_id=task_id,
+            ),
         )
 
     def submit_generate(self, *, project_id: str, task_id: str, payload: GenerationRequest) -> None:
-        self.celery_app.send_task(
-            "algohlper.generate_artifacts",
+        self._send_task_with_fallback(
+            task_name="algohlper.generate_artifacts",
             kwargs={
                 "project_id": project_id,
                 "task_id": task_id,
                 "payload": payload.model_dump(mode="json"),
             },
+            fallback_submit=lambda: self.fallback_queue.submit_generate(
+                project_id=project_id,
+                task_id=task_id,
+                payload=payload,
+            ),
         )
 
     def submit_duel(self, *, project_id: str, task_id: str, payload: DuelRequest) -> None:
-        self.celery_app.send_task(
-            "algohlper.duel_project",
+        self._send_task_with_fallback(
+            task_name="algohlper.duel_project",
             kwargs={
                 "project_id": project_id,
                 "task_id": task_id,
                 "payload": payload.model_dump(mode="json"),
             },
+            fallback_submit=lambda: self.fallback_queue.submit_duel(
+                project_id=project_id,
+                task_id=task_id,
+                payload=payload,
+            ),
         )
 
 
@@ -110,14 +133,6 @@ def create_task_queue(
     duel_service: DuelService | None = None,
 ):
     backend = settings.task_queue_backend.lower()
-    if backend == "celery":
-        try:
-            from algohlper.worker.celery_app import create_celery_app
-            celery_app = create_celery_app(settings)
-            return CeleryTaskQueue(celery_app)
-        except ImportError:
-            backend = "inprocess"
-
     resolved_store = store or JsonFileStore(settings.data_dir)
     resolved_tasks = tasks or TaskTracker(resolved_store)
     context = JobContext(
@@ -126,4 +141,15 @@ def create_task_queue(
         code_generator=code_generator or CompositeCodeGenerator(settings),
         duel_service=duel_service or DuelService(settings),
     )
-    return InProcessTaskQueue(context=context, max_workers=settings.inprocess_workers)
+    inprocess_queue = InProcessTaskQueue(context=context, max_workers=settings.inprocess_workers)
+
+    if backend == "celery":
+        try:
+            from algohlper.worker.celery_app import create_celery_app
+
+            celery_app = create_celery_app(settings)
+            return CeleryTaskQueue(celery_app, fallback_queue=inprocess_queue)
+        except ImportError:
+            backend = "inprocess"
+
+    return inprocess_queue

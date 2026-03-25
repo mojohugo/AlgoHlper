@@ -1,0 +1,16 @@
+{
+  "id": "prj_c767038762b5",
+  "name": "demo",
+  "status": "draft",
+  "raw_problem_content": "# Demo\n\n????\n???????",
+  "raw_problem_format": "markdown",
+  "normalized_problem_content": "# Demo\n\n????\n???????\n",
+  "problem_spec": null,
+  "artifacts": {},
+  "task_ids": [
+    "tsk_8d0dd09b2edf"
+  ],
+  "last_duel_result": null,
+  "created_at": "2026-03-25T08:23:14.465443Z",
+  "updated_at": "2026-03-25T08:23:14.488327Z"
+}
